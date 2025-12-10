@@ -154,56 +154,111 @@ public class SaveEditor
 
     private void CardsMenu()
     {
+        while (true)
+        {
+            var currentCards = _playerData.UnlockedCards ?? new List<string>();
+            var unlockedPets = currentCards.Intersect(Reference.Pets).Count();
+
+            var choice = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title($"[yellow]Cards Menu[/] [grey](Cards: {currentCards.Count}, Pets: {unlockedPets}/{Reference.Pets.Count})[/]")
+                    .AddChoices(new[]
+                    {
+                        "View Current Cards",
+                        "Unlock Pet Cards",
+                        "Unlock All Cards (from Reference)",
+                        "Back"
+                    }));
+
+            if (choice == "Back") return;
+
+            if (choice == "View Current Cards")
+            {
+                if (currentCards.Count == 0)
+                {
+                    AnsiConsole.MarkupLine("[grey]No cards unlocked yet[/]");
+                }
+                else
+                {
+                    // Show pets separately
+                    var pets = currentCards.Where(c => Reference.Pets.Contains(c)).ToList();
+                    var otherCards = currentCards.Where(c => !Reference.Pets.Contains(c)).ToList();
+
+                    if (pets.Count > 0)
+                    {
+                        AnsiConsole.MarkupLine($"\n[yellow]Unlocked Pets ({pets.Count}):[/]");
+                        AnsiConsole.MarkupLine(string.Join(", ", pets));
+                    }
+
+                    var table = new Table();
+                    table.AddColumn($"Other Cards ({otherCards.Count})");
+                    foreach (var card in otherCards.Take(50))
+                    {
+                        table.AddRow(card);
+                    }
+                    if (otherCards.Count > 50)
+                    {
+                        table.AddRow($"[grey]... and {otherCards.Count - 50} more[/]");
+                    }
+                    AnsiConsole.Write(table);
+                }
+                AnsiConsole.Markup("[grey]Press any key to continue...[/]");
+                SystemConsole.ReadKey(true);
+            }
+            else if (choice == "Unlock Pet Cards")
+            {
+                PetCardsMenu();
+            }
+            else if (choice == "Unlock All Cards (from Reference)")
+            {
+                // Add all cards from reference that aren't already unlocked
+                var allCards = new HashSet<string>(currentCards);
+                foreach (var card in Reference.Cards)
+                {
+                    allCards.Add(card);
+                }
+                // Also add all pets
+                foreach (var pet in Reference.Pets)
+                {
+                    allCards.Add(pet);
+                }
+                _playerData.UnlockedCards = allCards.ToList();
+                _hasChanges = true;
+                AnsiConsole.MarkupLine($"[green]Cards updated! Now have {_playerData.UnlockedCards.Count} cards (including all pets)[/]");
+                Thread.Sleep(500);
+            }
+        }
+    }
+
+    private void PetCardsMenu()
+    {
         var currentCards = _playerData.UnlockedCards ?? new List<string>();
 
-        var choice = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title($"[yellow]Cards Menu[/] [grey](Currently {currentCards.Count} cards unlocked)[/]")
-                .AddChoices(new[]
-                {
-                    "View Current Cards",
-                    "Unlock All Cards (from Reference)",
-                    "Back"
-                }));
+        var prompt = new MultiSelectionPrompt<string>()
+            .Title("[yellow]Select pets to unlock[/]")
+            .PageSize(20)
+            .InstructionsText("[grey](Press [blue]<space>[/] to toggle, [green]<enter>[/] to confirm)[/]")
+            .AddChoices(Reference.Pets);
 
-        if (choice == "Back") return;
+        // Pre-select currently unlocked pets
+        foreach (var pet in currentCards)
+        {
+            if (Reference.Pets.Contains(pet))
+            {
+                prompt.Select(pet);
+            }
+        }
 
-        if (choice == "View Current Cards")
-        {
-            if (currentCards.Count == 0)
-            {
-                AnsiConsole.MarkupLine("[grey]No cards unlocked yet[/]");
-            }
-            else
-            {
-                var table = new Table();
-                table.AddColumn("Unlocked Cards");
-                foreach (var card in currentCards.Take(50))
-                {
-                    table.AddRow(card);
-                }
-                if (currentCards.Count > 50)
-                {
-                    table.AddRow($"[grey]... and {currentCards.Count - 50} more[/]");
-                }
-                AnsiConsole.Write(table);
-            }
-            AnsiConsole.Markup("[grey]Press any key to continue...[/]");
-            SystemConsole.ReadKey(true);
-        }
-        else if (choice == "Unlock All Cards (from Reference)")
-        {
-            // Add all cards from reference that aren't already unlocked
-            var allCards = new HashSet<string>(currentCards);
-            foreach (var card in Reference.Cards)
-            {
-                allCards.Add(card);
-            }
-            _playerData.UnlockedCards = allCards.ToList();
-            _hasChanges = true;
-            AnsiConsole.MarkupLine($"[green]Cards updated! Now have {_playerData.UnlockedCards.Count} cards[/]");
-            Thread.Sleep(500);
-        }
+        var selectedPets = AnsiConsole.Prompt(prompt);
+
+        // Update cards list: keep non-pet cards, add selected pets
+        var nonPetCards = currentCards.Where(c => !Reference.Pets.Contains(c)).ToList();
+        var newCards = nonPetCards.Concat(selectedPets).Distinct().ToList();
+
+        _playerData.UnlockedCards = newCards;
+        _hasChanges = true;
+        AnsiConsole.MarkupLine($"[green]Selected {selectedPets.Count} pets![/]");
+        Thread.Sleep(500);
     }
 
     private void ResourcesMenu()

@@ -4,6 +4,8 @@ Fork of the original UnlockTheObelisk with Mac support and an interactive TUI ed
 
 Simple command line tool for unlocking various things in the game Across The Obelisk.
 
+> **For developers**: See [ARCHITECTURE.md](ARCHITECTURE.md) for technical details on how save file editing works.
+
 Run at your own risk. I'm not responsible if it ruins your game data, corrupts your hard drive, destroys your marriage, or anything else.
 
 ## Quick Start (Mac)

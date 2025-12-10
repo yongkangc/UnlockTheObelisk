@@ -70,6 +70,40 @@ public static class Reference
     public static string GetHeroDisplayName(string heroId) =>
         HeroNames.TryGetValue(heroId, out var name) ? $"{name} ({heroId})" : heroId;
 
+    // Known pet card IDs (pets are cards with CardType = Pet)
+    public static IReadOnlyList<string> Pets = new List<string>
+    {
+        // Base Game Pets
+        "asmody",
+        "batsy",
+        "betty",
+        "bunny",
+        "champy",
+        "chompy",
+        "chumpy",
+        "cubydark",
+        "cubyholy",
+        "daley",
+        "fenny",
+        "flamy",
+        "lianta",
+        "matey",
+        "mimy",
+        "mozzy",
+        "oculy",
+        "orby",
+        "rocky",
+        "sharpy",
+        "slimy",
+        "stormy",
+        // DLC Pets
+        "floaty",   // Nenukil
+        "inky",     // Bernard
+        "jelly",    // Sigrun
+        "wolfy",    // Wolf Wars DLC
+        "lychee",   // Necropolis DLC
+    };
+
     // Cards list - this is a subset, cards are dynamically loaded from save
     public static IReadOnlyList<string> Cards = new List<string>
     {
