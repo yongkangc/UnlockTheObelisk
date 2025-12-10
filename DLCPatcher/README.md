@@ -1,204 +1,216 @@
-# DLC Patcher for Across The Obelisk
+# Unity IL Patching Tutorial
 
-> ⚠️ **DISCLAIMER: FOR EDUCATIONAL AND RESEARCH PURPOSES ONLY**
->
-> This tool is provided strictly for:
-> - **CTF (Capture The Flag) challenges**
-> - **Security research and education**
-> - **Understanding game protection mechanisms**
->
-> **Using this tool to access DLC content you have not purchased violates:**
-> - Steam's Terms of Service
-> - The game's EULA
-> - Potentially copyright law in your jurisdiction
->
-> **The authors do not condone piracy.** Support game developers by purchasing content legitimately. This code is released for educational purposes to demonstrate IL patching techniques.
+> **Learn how .NET IL bytecode works by modifying a real Unity game**
+
+A hands-on tutorial exploring IL (Intermediate Language) patching techniques in Unity/.NET applications. Uses "Across The Obelisk" as a practical case study to understand:
+
+- How C# compiles to IL bytecode
+- How to decompile and analyze .NET assemblies
+- How to modify IL instructions using Mono.Cecil
+- Why client-side verification is inherently insecure
 
 ---
 
-A command-line tool that patches the game to bypass Steam DLC ownership verification. Uses IL (Intermediate Language) patching via Mono.Cecil to modify the game's .NET assembly.
+## Responsible Use Policy
 
-## Quick Start
+### ✅ Permitted Uses
+- Security research and education
+- CTF (Capture The Flag) challenges and competitions
+- Academic study of game protection mechanisms
+- Understanding IL/bytecode manipulation techniques
+- Developing better protection for your own games
+- Authorized penetration testing
 
-```bash
-# From the UnlockTheObelisk root directory:
+### ❌ Prohibited Uses
+- Accessing content you haven't legally purchased
+- Piracy or theft of services
+- Commercial exploitation
+- Distributing patched game files
+- Any activity that violates applicable laws
 
-# Check if game is patched
-make dlc-status
+### Legal Notice
 
-# Apply DLC bypass patch
-make dlc-patch
+This project is provided for **educational purposes only** under fair use principles for security research. No copyrighted game code or assets are distributed. Users are solely responsible for ensuring their use complies with applicable laws and terms of service.
 
-# Restore original game files
-make dlc-restore
+**If you are a rights holder** with concerns about this research, please open an issue. I will promptly address legitimate concerns.
 
-# Show technical details
-make dlc-help
+---
+
+## What You'll Learn
+
+### Why Unity/Mono Games Are Easy to Analyze
+
+Unity games compiled with **Mono** (instead of IL2CPP) retain full metadata:
+
+```
+C# Source Code → IL Bytecode (with names!) → JIT Compiled at Runtime
+                      ↑
+              We can read and modify this!
 ```
 
-## How It Works
+This allows:
+- Near-perfect decompilation back to C#
+- Easy identification of any function
+- Simple bytecode patching
+
+### The Security Lesson
+
+**Client-side trust is broken by design.** Any verification running on the user's machine can be bypassed.
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         ATTACK CHAIN SUMMARY                            │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐          │
-│  │  FIND    │    │DECOMPILE │    │  PATCH   │    │  PROFIT  │          │
-│  │  DLL     │───▶│  (ILSpy) │───▶│  (Cecil) │───▶│  ALL DLC │          │
-│  └──────────┘    └──────────┘    └──────────┘    └──────────┘          │
-│                                                                         │
-│  Unity games use IL bytecode (readable) instead of native code.        │
-│  We find PlayerHaveDLC(), replace it with "return true;", done.        │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                    THE FUNDAMENTAL PROBLEM                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   "Should I show DLC content?"                                  │
+│                                                                 │
+│   ┌─────────────┐         ┌─────────────┐                      │
+│   │   CLIENT    │ ◄─────► │   STEAM     │                      │
+│   │  (Game.exe) │  Query  │   CLIENT    │                      │
+│   │             │         │             │                      │
+│   │  Decision   │         │  Ownership  │                      │
+│   │  made HERE  │◄────────│  Info       │                      │
+│   └─────────────┘         └─────────────┘                      │
+│         │                                                       │
+│         ▼                                                       │
+│   VULNERABLE: Attacker controls the decision point             │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-**Original code** checks Steam ownership → **Patched code** always returns true.
+### The Patch (Proof of Concept)
 
 ```csharp
-// BEFORE: 23 IL instructions checking Steam
+// ORIGINAL: 59 bytes, checks Steam API
 public bool PlayerHaveDLC(string _sku) {
     if (GetDeveloperMode() || CheatMode) return true;
     if (SteamApps.IsSubscribedToApp(sku)) return true;
     return false;
 }
 
-// AFTER: 2 IL instructions
+// PATCHED: 2 bytes, always returns true
 public bool PlayerHaveDLC(string _sku) {
     return true;
 }
 ```
 
-> **For the full technical deep-dive**, see:
-> - [TECHNICAL.md](TECHNICAL.md) - Why this game is vulnerable, protection methods, IL instructions explained
-> - [HOW_DECOMPILING_WORKS.md](HOW_DECOMPILING_WORKS.md) - How .NET decompilation and patching works
-> - [DLC.md](DLC.md) - Complete reverse engineering writeup
-
-## Platform Support
-
-### macOS
-✅ **Fully Supported**
-
-```bash
-# Requires .NET 6 SDK
-brew install dotnet@6
-
-# Game DLL auto-detected at:
-~/Library/Application Support/Steam/steamapps/common/Across the Obelisk/Contents/Resources/Data/Managed/Assembly-CSharp.dll
+**Raw IL change:**
+```
+Before: 28 XX XX XX XX 6F XX XX ... (59 bytes)
+After:  17 2A                       (2 bytes: ldc.i4.1, ret)
 ```
 
-### Windows
-✅ **Fully Supported**
+---
 
-```bash
-# Requires .NET 6 SDK (download from Microsoft)
+## Documentation
 
-# Game DLL auto-detected at:
-C:\Program Files (x86)\Steam\steamapps\common\Across the Obelisk\AcrossTheObelisk_Data\Managed\Assembly-CSharp.dll
+| Document | Description |
+|----------|-------------|
+| [TECHNICAL.md](TECHNICAL.md) | Why Unity/Mono games are vulnerable vs protected games |
+| [DLC.md](DLC.md) | Complete reverse engineering methodology |
+| `Program.cs` | Proof-of-concept patcher using Mono.Cecil |
+
+---
+
+## Security Recommendations for Developers
+
+If you're building a Unity game, here's how to protect against this class of attack:
+
+### 1. Use IL2CPP (Not Mono)
+```
+Unity → Build Settings → Player → Scripting Backend → IL2CPP
+```
+Compiles C# → C++ → Native. Much harder to reverse.
+
+### 2. Server-Side Validation
+```csharp
+// ❌ Vulnerable: Client decides
+if (SteamApps.IsSubscribedToApp(dlcId))
+    ShowContent();
+
+// ✅ Secure: Server decides
+var response = await GameServer.ValidateDLC(steamTicket, dlcId);
+if (response.Valid)
+    LoadEncryptedContent(response.DecryptionKey);
 ```
 
-Or specify custom path:
+### 3. Encrypt DLC Content
+- Don't ship plaintext DLC assets
+- Derive decryption keys from valid license tokens
+- Bypassing the check is useless without the key
+
+### 4. Code Obfuscation
+- [Beebyte Obfuscator](https://assetstore.unity.com/packages/tools/utilities/obfuscator-48919)
+- [ConfuserEx](https://github.com/mkaring/ConfuserEx)
+
+Makes analysis harder (not impossible, but raises the bar).
+
+### 5. Integrity Verification
+- Hash critical assemblies at startup
+- Detect tampering and refuse to run
+- Phone home for validation (with offline grace period)
+
+---
+
+## Running the Research Tool
+
+### Prerequisites
+- .NET 6 SDK
+- The target game installed (for case study)
+
+### Via Makefile
 ```bash
-dotnet run -- "D:\Games\Across the Obelisk\AcrossTheObelisk_Data\Managed\Assembly-CSharp.dll"
+make dlc-status   # Check current state
+make dlc-patch    # Apply research patch
+make dlc-restore  # Restore original
+make dlc-help     # Technical details
 ```
 
-### Linux
-✅ **Should Work** (untested)
-
+### Standalone
 ```bash
-# Install .NET 6 SDK via package manager
-
-# Typical Steam path:
-~/.steam/steam/steamapps/common/Across the Obelisk/.../Assembly-CSharp.dll
-```
-
-## Makefile Commands
-
-| Command | Description |
-|---------|-------------|
-| `make dlc-patch` | Apply the DLC bypass patch |
-| `make dlc-restore` | Restore original DLL from backup |
-| `make dlc-status` | Check if game is patched or original |
-| `make dlc-help` | Show technical details and DLC list |
-| `make dlc-build` | Build the patcher (auto-run by other commands) |
-
-## Standalone Usage
-
-You can also run the patcher directly:
-
-```bash
-# Build
 dotnet build -c Release
-
-# Run with auto-detection
-dotnet bin/Release/net6.0/DLCPatcher.dll
-
-# Run with custom path
-dotnet bin/Release/net6.0/DLCPatcher.dll /path/to/Assembly-CSharp.dll
-
-# Check status
-dotnet bin/Release/net6.0/DLCPatcher.dll --status
-
-# Restore original
-dotnet bin/Release/net6.0/DLCPatcher.dll --restore
+dotnet run -- --status              # Check status
+dotnet run -- [path-to-dll]         # Apply patch
+dotnet run -- --restore             # Restore
 ```
 
-## DLCs Unlocked
+### Platform Support
 
-| App ID | DLC Name |
-|--------|----------|
-| 2666340 | Amelia the Queen |
-| 2168960 | Spooky Nights in Senenthia |
-| 2511580 | Sands of Ulminin |
-| 2325780 | Wolf Wars |
-| 2879690 | The Obsidian Uprising |
-| 2879680 | Nenukil the Engineer |
-| 3875470 | Necropolis |
-| 4013420 | Asian Skins |
+| Platform | Status | Auto-detected Path |
+|----------|--------|-------------------|
+| macOS | ✅ | `~/Library/Application Support/Steam/steamapps/common/...` |
+| Windows | ✅ | `C:\Program Files (x86)\Steam\steamapps\common\...` |
+| Linux | ✅ | `~/.steam/steam/steamapps/common/...` |
 
-## Files
+---
+
+## Project Structure
 
 ```
 DLCPatcher/
-├── README.md                   # This file
-├── DLC.md                      # Full reverse engineering writeup
-├── TECHNICAL.md                # Why Unity games are vulnerable
-├── HOW_DECOMPILING_WORKS.md    # Deep dive into IL patching
-├── DLCPatcher.csproj           # .NET project file
-└── Program.cs                  # Patcher source code
+├── README.md           # This file
+├── TECHNICAL.md        # Vulnerability analysis
+├── DLC.md              # Reverse engineering writeup
+├── DLCPatcher.csproj   # .NET project
+└── Program.cs          # PoC patcher (Mono.Cecil)
 ```
 
-## Backup & Restore
+---
 
-The patcher automatically creates a backup before patching:
-- Backup: `Assembly-CSharp.dll.backup`
-- Original is preserved and can be restored anytime
+## References
 
-To restore manually:
-```bash
-# macOS
-cp "~/Library/.../Managed/Assembly-CSharp.dll.backup" "~/Library/.../Managed/Assembly-CSharp.dll"
+- [Mono.Cecil](https://github.com/jbevain/cecil) - .NET assembly manipulation
+- [ILSpy](https://github.com/icsharpcode/ILSpy) - .NET decompiler
+- [dnSpy](https://github.com/dnSpy/dnSpy) - .NET debugger/editor
+- [Unity IL2CPP](https://docs.unity3d.com/Manual/IL2CPP.html) - Secure compilation
+- [OWASP Mobile Top 10](https://owasp.org/www-project-mobile-top-10/) - Client-side security
 
-# Windows
-copy "...\Managed\Assembly-CSharp.dll.backup" "...\Managed\Assembly-CSharp.dll"
-```
+---
 
-## Notes
+## License
 
-- **Steam Updates**: Steam may restore original files during game updates or "Verify Integrity". Re-run `make dlc-patch` after updates.
-- **Multiplayer**: Patched DLLs may affect multiplayer compatibility.
-- **Leaderboards**: Some leaderboard features may not work correctly.
+MIT License - Applies to research code only, not to any third-party software or game assets.
 
-## Technical Details
+---
 
-See [DLC.md](DLC.md) for the full reverse engineering writeup including:
-- Steam API verification flow
-- Decompilation process
-- All patching methods considered
-- Alternative approaches (Steam emulators, memory patching)
-
-## Dependencies
-
-- [Mono.Cecil](https://github.com/jbevain/cecil) - .NET assembly manipulation library
-- .NET 6.0 SDK
+*This research demonstrates a known class of vulnerability. The goal is education and helping developers build more secure software.*

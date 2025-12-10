@@ -91,6 +91,92 @@ ret        = "Return"
            = Returns true to whoever called PlayerHaveDLC()
 ```
 
+### Exact Decompiled Output (Before vs After)
+
+**ORIGINAL** (from `Assembly-CSharp.dll.backup`):
+```csharp
+public bool PlayerHaveDLC(string _sku)
+{
+    if (GameManager.Instance.GetDeveloperMode() || GameManager.Instance.CheatMode)
+    {
+        return true;
+    }
+    uint num = uint.Parse(_sku);
+    if (SteamApps.IsSubscribedToApp(num) && LauncherEnabledDLC(num))
+    {
+        return true;
+    }
+    return false;
+}
+```
+
+**ORIGINAL IL** (59 bytes):
+```
+.method public hidebysig instance bool PlayerHaveDLC(string _sku) cil managed
+{
+    .maxstack 2
+    .locals init ([0] uint32)
+
+    IL_0000: call       class GameManager GameManager::get_Instance()
+    IL_0005: callvirt   instance bool GameManager::GetDeveloperMode()
+    IL_000a: brtrue.s   IL_0018
+    IL_000c: call       class GameManager GameManager::get_Instance()
+    IL_0011: callvirt   instance bool GameManager::get_CheatMode()
+    IL_0016: brfalse.s  IL_001a
+    IL_0018: ldc.i4.1
+    IL_0019: ret
+    IL_001a: ldarg.1
+    IL_001b: call       uint32 [netstandard]System.UInt32::Parse(string)
+    IL_0020: stloc.0
+    IL_0021: ldloc.0
+    IL_0022: call       valuetype Steamworks.AppId Steamworks.AppId::op_Implicit(uint32)
+    IL_0027: call       bool Steamworks.SteamApps::IsSubscribedToApp(valuetype Steamworks.AppId)
+    IL_002c: brfalse.s  IL_0039
+    IL_002e: ldarg.0
+    IL_002f: ldloc.0
+    IL_0030: call       instance bool SteamManager::LauncherEnabledDLC(uint32)
+    IL_0035: brfalse.s  IL_0039
+    IL_0037: ldc.i4.1
+    IL_0038: ret
+    IL_0039: ldc.i4.0
+    IL_003a: ret
+}
+```
+
+**PATCHED** (from `Assembly-CSharp.dll`):
+```csharp
+public bool PlayerHaveDLC(string _sku)
+{
+    return true;
+}
+```
+
+**PATCHED IL** (2 bytes):
+```
+.method public hidebysig instance bool PlayerHaveDLC(string _sku) cil managed
+{
+    .maxstack 1
+
+    IL_0000: ldc.i4.1   // Push integer 1 (true)
+    IL_0001: ret        // Return
+}
+```
+
+### Raw Byte Comparison
+
+```
+ORIGINAL: 00 28 [token] 6F [token] 2D 0C 28 [token] 6F [token] 2C 02 17 2A 02 28 ...
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          59 bytes of IL opcodes
+
+PATCHED:  17 2A
+          │  │
+          │  └── 2A = ret (return)
+          └───── 17 = ldc.i4.1 (push 1/true)
+
+          2 bytes total. That's the entire method.
+```
+
 ---
 
 ## Why This Game Is Vulnerable

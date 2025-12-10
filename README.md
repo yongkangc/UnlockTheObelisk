@@ -8,6 +8,8 @@ Simple command line tool for unlocking various things in the game Across The Obe
 
 > **For developers**: See [ARCHITECTURE.md](ARCHITECTURE.md) for technical details on how save file editing works.
 
+> **Security Research**: See [DLCPatcher/](DLCPatcher/) for a tutorial on Unity IL patching techniques.
+
 Run at your own risk. I'm not responsible if it ruins your game data, corrupts your hard drive, destroys your marriage, or anything else.
 
 ## Quick Start (Mac)
@@ -131,7 +133,26 @@ make backup      # Backup your save
 make restore     # Restore from latest backup
 make find-save   # Show detected save path
 make clean       # Clean build artifacts
+
+# DLC Patcher (IL Patching Tutorial)
+make dlc-status  # Check if game DLL is patched
+make dlc-patch   # Apply IL patch (for research)
+make dlc-restore # Restore original DLL
+make dlc-help    # Show technical details
 ```
+
+---
+
+## Unity IL Patching Tutorial
+
+The [DLCPatcher/](DLCPatcher/) folder contains a hands-on tutorial demonstrating:
+
+- **How .NET IL bytecode works** - Understanding the intermediate language
+- **Decompilation techniques** - Using ILSpy/dnSpy to analyze assemblies
+- **IL patching with Mono.Cecil** - Programmatically modifying bytecode
+- **Security implications** - Why client-side verification is insecure
+
+This is educational content for security researchers and CTF participants. See the [DLCPatcher README](DLCPatcher/README.md) for details.
 
 ---
 
