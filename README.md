@@ -46,7 +46,8 @@ Launch the editor with just the save file path to get an interactive menu:
 - **Madness Levels** - Set Obelisk/Adventure/Singularity madness
 - **Unlock All** - Quick option to max everything
 - **Reward Chests** - Create/edit reward chests claimable in town
-<img width="478" height="172" alt="image" src="https://github.com/user-attachments/assets/9b6cd8b3-eaee-44c0-8747-e6f32cdd1132" />
+<img width="358" height="273" alt="image" src="https://github.com/user-attachments/assets/bf4c99a7-5033-4b6c-aa78-193152c4ea29" />
+
 
 ### Important Notes
 
