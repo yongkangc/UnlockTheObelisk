@@ -22,7 +22,53 @@ make dlc-help
 
 ## How It Works
 
-### The Problem
+### Why Unity Games Can Be Decompiled
+
+Unlike C/C++ games that compile to unreadable machine code, Unity/.NET games compile to **IL (Intermediate Language)** which preserves all names and logic:
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    NATIVE vs .NET COMPILATION                           │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  C/C++ (HARD TO REVERSE):              Unity/C# (EASY TO REVERSE):     │
+│                                                                         │
+│  Source     Compiler    Binary         Source    Compiler     IL DLL   │
+│  ┌─────┐    ┌─────┐    ┌─────┐        ┌─────┐    ┌─────┐    ┌─────┐   │
+│  │ C++ │───▶│ gcc │───▶│ x64 │        │ C#  │───▶│Roslyn│───▶│ IL  │   │
+│  │code │    │     │    │code │        │code │    │     │    │code │   │
+│  └─────┘    └─────┘    └─────┘        └─────┘    └─────┘    └─────┘   │
+│                             │                                   │       │
+│                             ▼                                   ▼       │
+│                     48 89 5C 24 08              .method public bool    │
+│                     57 48 83 EC 20                PlayerHaveDLC()      │
+│                     (unreadable)                  (readable!)          │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### The Attack Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         COMPLETE ATTACK CHAIN                           │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│   ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐        │
+│   │  FIND    │    │DECOMPILE │    │  PATCH   │    │  PROFIT  │        │
+│   │  DLL     │───▶│  WITH    │───▶│  WITH    │───▶│  ALL DLC │        │
+│   │          │    │  ILSPY   │    │MONO.CECIL│    │ UNLOCKED │        │
+│   └──────────┘    └──────────┘    └──────────┘    └──────────┘        │
+│        │               │               │               │               │
+│        ▼               ▼               ▼               ▼               │
+│   Assembly-       See full       Replace IL      Game loads           │
+│   CSharp.dll      C# source      bytecode        patched DLL          │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### The Problem (Original Code)
+
 Across The Obelisk checks Steam for DLC ownership via:
 ```csharp
 public bool PlayerHaveDLC(string _sku)
@@ -37,7 +83,8 @@ public bool PlayerHaveDLC(string _sku)
 }
 ```
 
-### The Solution
+### The Solution (Patched Code)
+
 We patch the method to always return `true`:
 ```csharp
 public bool PlayerHaveDLC(string _sku)
@@ -46,11 +93,50 @@ public bool PlayerHaveDLC(string _sku)
 }
 ```
 
-### IL Bytecode
-The patched method is just 2 instructions:
+### What The Patch Does
+
 ```
-IL_0000: ldc.i4.1   // Push 1 (true) onto stack
-IL_0001: ret        // Return
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    BEFORE AND AFTER PATCHING                            │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ORIGINAL (23 IL instructions):       PATCHED (2 IL instructions):     │
+│  ┌─────────────────────────────┐     ┌─────────────────────────────┐   │
+│  │ call GetInstance()          │     │ ldc.i4.1    // push "true"  │   │
+│  │ callvirt GetDeveloperMode() │     │ ret         // return it    │   │
+│  │ brtrue.s return_true        │     └─────────────────────────────┘   │
+│  │ call GetInstance()          │                                       │
+│  │ callvirt get_CheatMode()    │      Method now ALWAYS returns true   │
+│  │ brfalse.s check_steam       │      Steam check COMPLETELY REMOVED   │
+│  │ ldc.i4.1                    │                                       │
+│  │ ret                         │                                       │
+│  │ ldarg.1                     │                                       │
+│  │ call UInt32.Parse()         │                                       │
+│  │ call IsSubscribedToApp() ◄──│── This Steam API call is GONE        │
+│  │ brfalse.s return_false      │                                       │
+│  │ ... more checks ...         │                                       │
+│  │ ret                         │                                       │
+│  └─────────────────────────────┘                                       │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Why The Game Doesn't Detect This
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                 NO PROTECTION = EASY TARGET                             │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ❌ No code signing      - DLL not cryptographically signed            │
+│  ❌ No hash verification - Game doesn't check if DLL was modified      │
+│  ❌ No anti-tamper       - No Denuvo/VMProtect                         │
+│  ❌ No server validation - DLC check is 100% client-side               │
+│  ❌ No IL2CPP            - Uses Mono (readable IL), not native code    │
+│                                                                         │
+│  The game TRUSTS the DLL completely. Modify it = game runs our code.  │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Platform Support
@@ -139,10 +225,12 @@ dotnet bin/Release/net6.0/DLCPatcher.dll --restore
 
 ```
 DLCPatcher/
-├── README.md           # This file
-├── DLC.md              # Detailed technical writeup
-├── DLCPatcher.csproj   # .NET project file
-└── Program.cs          # Patcher source code
+├── README.md                   # This file
+├── DLC.md                      # Full reverse engineering writeup
+├── TECHNICAL.md                # Why Unity games are vulnerable
+├── HOW_DECOMPILING_WORKS.md    # Deep dive into IL patching
+├── DLCPatcher.csproj           # .NET project file
+└── Program.cs                  # Patcher source code
 ```
 
 ## Backup & Restore
