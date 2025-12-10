@@ -19,7 +19,7 @@ DLL := ATOUnlocker/bin/Debug/net6.0/ATOUnlocker.dll
 STEAM_ID ?= $(shell ls "$(SAVE_DIR)" 2>/dev/null | grep -E '^[0-9]+$$' | head -1)
 SAVE_FILE := $(SAVE_DIR)/$(STEAM_ID)/player.ato
 
-.PHONY: build run tui cli-all cli-heroes cli-town cli-perks backup restore clean help find-save
+.PHONY: build run tui cli-all cli-heroes cli-town cli-perks backup backup-full restore restore-full clean help find-save
 
 # Default target
 help:
@@ -37,8 +37,10 @@ help:
 	@echo "  make cli-perks   - Max out all perk points"
 	@echo ""
 	@echo "Save management:"
-	@echo "  make backup      - Backup your save file"
-	@echo "  make restore     - Restore from backup"
+	@echo "  make backup      - Backup player.ato only"
+	@echo "  make backup-full - Backup ALL save files (player, runs, perks, gamedata)"
+	@echo "  make restore     - Restore player.ato from backup"
+	@echo "  make restore-full - Restore ALL save files from backup"
 	@echo "  make find-save   - Show detected save file path"
 	@echo ""
 	@echo "Other:"
@@ -101,7 +103,7 @@ backup:
 		echo "Save file not found: $(SAVE_FILE)"; \
 	fi
 
-# Restore from most recent backup
+# Restore player.ato from most recent backup
 restore:
 	@if [ -z "$(STEAM_ID)" ]; then \
 		echo "Error: Could not detect Steam ID."; \
@@ -113,6 +115,43 @@ restore:
 		echo "Restored from: $$LATEST"; \
 	else \
 		echo "No backup found"; \
+	fi
+
+# Full backup - all save files to timestamped directory
+backup-full:
+	@if [ -z "$(STEAM_ID)" ]; then \
+		echo "Error: Could not detect Steam ID."; \
+		exit 1; \
+	fi
+	@BACKUP_DIR="$(SAVE_DIR)/$(STEAM_ID)/backup_$$(date +%Y%m%d_%H%M%S)"; \
+	mkdir -p "$$BACKUP_DIR"; \
+	echo "Creating full backup in: $$BACKUP_DIR"; \
+	for f in player.ato runs.ato perks.ato gamedata_0.ato gamedata_1.ato; do \
+		if [ -f "$(SAVE_DIR)/$(STEAM_ID)/$$f" ]; then \
+			cp "$(SAVE_DIR)/$(STEAM_ID)/$$f" "$$BACKUP_DIR/"; \
+			echo "  Backed up: $$f"; \
+		fi; \
+	done; \
+	echo "Full backup complete!"
+
+# Restore all save files from most recent full backup
+restore-full:
+	@if [ -z "$(STEAM_ID)" ]; then \
+		echo "Error: Could not detect Steam ID."; \
+		exit 1; \
+	fi
+	@LATEST_DIR=$$(ls -td "$(SAVE_DIR)/$(STEAM_ID)"/backup_* 2>/dev/null | head -1); \
+	if [ -n "$$LATEST_DIR" ] && [ -d "$$LATEST_DIR" ]; then \
+		echo "Restoring from: $$LATEST_DIR"; \
+		for f in player.ato runs.ato perks.ato gamedata_0.ato gamedata_1.ato; do \
+			if [ -f "$$LATEST_DIR/$$f" ]; then \
+				cp "$$LATEST_DIR/$$f" "$(SAVE_DIR)/$(STEAM_ID)/"; \
+				echo "  Restored: $$f"; \
+			fi; \
+		done; \
+		echo "Full restore complete!"; \
+	else \
+		echo "No full backup found. Use 'make backup-full' first."; \
 	fi
 
 # Show detected save file
