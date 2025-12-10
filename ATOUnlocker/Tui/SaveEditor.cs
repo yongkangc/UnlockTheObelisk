@@ -196,6 +196,8 @@ public class SaveEditor
         while (true)
         {
             var currentSupply = _playerData.SupplyActual;
+            var currentGold = _playerData.GoldGained;
+            var currentDust = _playerData.DustGained;
             var currentPerkPoints = _playerData.PlayerRankProgress;
 
             var choice = AnsiConsole.Prompt(
@@ -204,6 +206,8 @@ public class SaveEditor
                     .AddChoices(new[]
                     {
                         $"Set Supply (Current: {currentSupply})",
+                        $"Set Gold (Current: {currentGold})",
+                        $"Set Shards/Dust (Current: {currentDust})",
                         $"Set Perk Points (Current: {currentPerkPoints})",
                         "Set Hero Progress",
                         "Back"
@@ -217,6 +221,26 @@ public class SaveEditor
                 _playerData.SupplyActual = value;
                 _hasChanges = true;
                 AnsiConsole.MarkupLine($"[green]Supply set to {value}[/]");
+            }
+            else if (choice.StartsWith("Set Gold"))
+            {
+                var value = AnsiConsole.Prompt(
+                    new TextPrompt<int>("[yellow]Enter gold amount:[/]")
+                        .DefaultValue(currentGold)
+                        .Validate(v => v >= 0 ? ValidationResult.Success() : ValidationResult.Error("Must be >= 0")));
+                _playerData.GoldGained = value;
+                _hasChanges = true;
+                AnsiConsole.MarkupLine($"[green]Gold set to {value}[/]");
+            }
+            else if (choice.StartsWith("Set Shards"))
+            {
+                var value = AnsiConsole.Prompt(
+                    new TextPrompt<int>("[yellow]Enter shards/dust amount:[/]")
+                        .DefaultValue(currentDust)
+                        .Validate(v => v >= 0 ? ValidationResult.Success() : ValidationResult.Error("Must be >= 0")));
+                _playerData.DustGained = value;
+                _hasChanges = true;
+                AnsiConsole.MarkupLine($"[green]Shards/Dust set to {value}[/]");
             }
             else if (choice.StartsWith("Set Perk Points"))
             {
