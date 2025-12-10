@@ -1,11 +1,42 @@
 # UnlockTheObelisk (Mac Fork)
 
-Fork of [the original UnlockTheObelisk](https://github.com/original-author/UnlockTheObelisk) with Mac support.
+Fork of the original UnlockTheObelisk with Mac support and an interactive TUI editor.
 
 Simple command line tool for unlocking various things in the game Across The Obelisk.
 
 Run at your own risk. I'm not responsible if it ruins your game data, corrupts your hard drive, destroys your marriage, or anything else.
-If it does not work, you are welcome to modify the source yourself but I do not intend to provide support for this project.
+
+## Quick Start (Mac)
+
+```bash
+# Install .NET 6
+brew install dotnet@6
+
+# Build and run TUI
+make run
+
+# Or quick unlock everything
+make cli-all
+```
+
+## Features
+
+### Interactive TUI Mode (Default)
+Launch the editor with just the save file path to get an interactive menu:
+
+![TUI Main Menu](images/tui-main-menu.png)
+- **Heroes** - Select which heroes to unlock
+- **Town Upgrades** - Unlock by tier (1-6) or all
+- **Cards** - View and manage unlocked cards
+- **Currencies & Resources** - Set Supply, Perk Points, Hero Progress
+- **Progression** - Toggle NG+ and set level
+- **Madness Levels** - Set Obelisk/Adventure/Singularity madness
+- **Unlock All** - Quick option to max everything
+
+### CLI Mode
+Pass arguments directly for quick unlocks without the interactive menu.
+
+---
 
 ## Mac Setup & Usage
 
@@ -40,22 +71,42 @@ cp ~/Library/Application\ Support/Dreamsite\ Games/AcrossTheObelisk/YOUR_STEAM_I
 ```
 
 ### Run
+
+**Interactive TUI Mode (default):**
 ```bash
-/opt/homebrew/opt/dotnet@6/bin/dotnet ATOUnlocker/bin/Debug/net6.0/ATOUnlocker.dll "PATH_TO_player.ato" [args]
+/opt/homebrew/opt/dotnet@6/bin/dotnet ATOUnlocker/bin/Debug/net6.0/ATOUnlocker.dll "$HOME/Library/Application Support/Dreamsite Games/AcrossTheObelisk/YOUR_STEAM_ID/player.ato"
 ```
 
-**Arguments:**
-- `perks` - max out all perk points
-- `heroes` - unlock all heroes
-- `town` - unlock all town upgrades
-
-**Examples:**
+**CLI Mode (legacy):**
 ```bash
 # Unlock everything
 /opt/homebrew/opt/dotnet@6/bin/dotnet ATOUnlocker/bin/Debug/net6.0/ATOUnlocker.dll "$HOME/Library/Application Support/Dreamsite Games/AcrossTheObelisk/YOUR_STEAM_ID/player.ato" town perks heroes
 
 # Just unlock town upgrades
 /opt/homebrew/opt/dotnet@6/bin/dotnet ATOUnlocker/bin/Debug/net6.0/ATOUnlocker.dll "$HOME/Library/Application Support/Dreamsite Games/AcrossTheObelisk/YOUR_STEAM_ID/player.ato" town
+```
+
+**CLI Arguments:**
+- `perks` - max out all perk points
+- `heroes` - unlock all heroes
+- `town` - unlock all town upgrades
+
+### Makefile Commands
+
+The Makefile auto-detects your Steam ID and save file:
+
+```bash
+make help        # Show all commands
+make build       # Build the project
+make run         # Launch interactive TUI
+make cli-all     # Unlock everything (auto-backups first)
+make cli-heroes  # Unlock all heroes
+make cli-town    # Unlock all town upgrades
+make cli-perks   # Max out perk points
+make backup      # Backup your save
+make restore     # Restore from latest backup
+make find-save   # Show detected save path
+make clean       # Clean build artifacts
 ```
 
 ---
@@ -77,8 +128,13 @@ C:\Users\USER_NAME\AppData\LocalLow\Dreamsite Games\AcrossTheObelisk\STEAM_ID\pl
 ```
 
 ### Run
+
+**Interactive TUI Mode (default):**
 ```
-.\ATOUnlocker.exe "PATH_TO_ATO_FILE" [args]
+.\ATOUnlocker.exe "PATH_TO_player.ato"
 ```
 
-Arguments are the same as Mac: `perks`, `heroes`, `town`.
+**CLI Mode:**
+```
+.\ATOUnlocker.exe "PATH_TO_player.ato" town perks heroes
+```

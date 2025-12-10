@@ -10,6 +10,9 @@
     <gamePath Condition="'$(gamePath)'==''">$(HOME)/Library/Application Support/Steam/steamapps/common/Across the Obelisk/Contents/Resources/Data/Managed/</gamePath>
   </PropertyGroup>
     <ItemGroup>
+      <PackageReference Include="Spectre.Console" Version="0.47.0" />
+    </ItemGroup>
+    <ItemGroup>
       <Reference Include="Assembly-CSharp">
         <HintPath>$(gamePath)/Assembly-CSharp.dll</HintPath>
       </Reference>
