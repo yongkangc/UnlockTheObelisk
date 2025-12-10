@@ -26,14 +26,16 @@ Launch the editor with just the save file path to get an interactive menu:
 
 ![TUI Main Menu](images/tui-main-menu.png)
 - **Heroes** - Select which heroes to unlock
+<img width="247" height="305" alt="image" src="https://github.com/user-attachments/assets/82adda79-287d-44f7-ab0c-215c2dbc02fa" />
+
 - **Town Upgrades** - Unlock by tier (1-6) or all
 - **Cards** - View and manage unlocked cards
 - **Currencies & Resources** - Set Supply, Perk Points, Hero Progress
+  <img width="501" height="214" alt="image" src="https://github.com/user-attachments/assets/b71cf6f1-6aa8-425c-bcb0-312b4344c530" />
+
 - **Progression** - Toggle NG+ and set level
 - **Madness Levels** - Set Obelisk/Adventure/Singularity madness
 - **Unlock All** - Quick option to max everything
-
-<img width="243" height="302" alt="image" src="https://github.com/user-attachments/assets/d62eac90-8533-4505-9ed4-feece9a5f274" />
 
 
 ### CLI Mode
