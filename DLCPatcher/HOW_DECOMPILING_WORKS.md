@@ -1,5 +1,7 @@
 # How Decompiling Works (And Why We Can Edit The Code)
 
+> ⚠️ **EDUCATIONAL CONTENT ONLY** - This document is for security research, CTF challenges, and understanding software internals. Do not use this knowledge for piracy.
+
 ## The Key Insight: .NET Is Not "Real" Machine Code
 
 Most people assume compiled code = unreadable binary. But .NET/Unity is different:

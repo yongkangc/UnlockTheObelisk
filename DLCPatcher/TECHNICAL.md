@@ -1,5 +1,7 @@
 # Why This Game Is Vulnerable - Technical Deep Dive
 
+> ⚠️ **EDUCATIONAL CONTENT ONLY** - This document explains software protection mechanisms for security research and CTF challenges. Do not use this knowledge to pirate software.
+
 ## Table of Contents
 1. [How PlayerHaveDLC Works](#how-playerhavedlc-works)
 2. [Why This Game Is Vulnerable](#why-this-game-is-vulnerable)

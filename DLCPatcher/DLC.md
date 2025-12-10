@@ -1,5 +1,11 @@
 # Steam DLC Bypass - Across The Obelisk
 
+> ⚠️ **DISCLAIMER: FOR EDUCATIONAL AND RESEARCH PURPOSES ONLY**
+>
+> This writeup is intended for **CTF challenges**, **security research**, and **educational purposes**.
+> Using these techniques to access content you haven't purchased is **piracy** and violates Steam's ToS.
+> **Support game developers by buying their games and DLC.**
+
 A CTF-style writeup on bypassing DLC ownership checks in Unity games using IL patching.
 
 ## Target Game

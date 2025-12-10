@@ -1,5 +1,21 @@
 # DLC Patcher for Across The Obelisk
 
+> ⚠️ **DISCLAIMER: FOR EDUCATIONAL AND RESEARCH PURPOSES ONLY**
+>
+> This tool is provided strictly for:
+> - **CTF (Capture The Flag) challenges**
+> - **Security research and education**
+> - **Understanding game protection mechanisms**
+>
+> **Using this tool to access DLC content you have not purchased violates:**
+> - Steam's Terms of Service
+> - The game's EULA
+> - Potentially copyright law in your jurisdiction
+>
+> **The authors do not condone piracy.** Support game developers by purchasing content legitimately. This code is released for educational purposes to demonstrate IL patching techniques.
+
+---
+
 A command-line tool that patches the game to bypass Steam DLC ownership verification. Uses IL (Intermediate Language) patching via Mono.Cecil to modify the game's .NET assembly.
 
 ## Quick Start
