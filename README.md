@@ -31,11 +31,13 @@ Launch the editor with just the save file path to get an interactive menu:
 - **Town Upgrades** - Unlock by tier (1-6) or all
 - **Cards** - View and manage unlocked cards
 - **Currencies & Resources** - Set Supply, Perk Points, Hero Progress
-  <img width="501" height="214" alt="image" src="https://github.com/user-attachments/assets/b71cf6f1-6aa8-425c-bcb0-312b4344c530" />
+<img width="501" height="214" alt="image" src="https://github.com/user-attachments/assets/b71cf6f1-6aa8-425c-bcb0-312b4344c530" />
 
 - **Progression** - Toggle NG+ and set level
 - **Madness Levels** - Set Obelisk/Adventure/Singularity madness
 - **Unlock All** - Quick option to max everything
+- **Reward Chest** - Quick option to max everything
+<img width="478" height="172" alt="image" src="https://github.com/user-attachments/assets/9b6cd8b3-eaee-44c0-8747-e6f32cdd1132" />
 
 
 ### CLI Mode
