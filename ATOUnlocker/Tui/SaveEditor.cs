@@ -221,8 +221,8 @@ public class SaveEditor
                     .AddChoices(new[]
                     {
                         $"Set Supply (Current: {currentSupply})",
-                        $"Set Gold (Current: {currentGold})",
-                        $"Set Shards/Dust (Current: {currentDust})",
+                        $"Set Gold Gained [Stats] (Current: {currentGold})",
+                        $"Set Shards Gained [Stats] (Current: {currentDust})",
                         $"Set Perk Points (Current: {currentPerkPoints})",
                         "Set Hero Progress",
                         "Back"
@@ -237,7 +237,7 @@ public class SaveEditor
                 _hasChanges = true;
                 AnsiConsole.MarkupLine($"[green]Supply set to {value}[/]");
             }
-            else if (choice.StartsWith("Set Gold"))
+            else if (choice.StartsWith("Set Gold Gained"))
             {
                 var value = AnsiConsole.Prompt(
                     new TextPrompt<int>("[yellow]Enter gold amount:[/]")
@@ -247,7 +247,7 @@ public class SaveEditor
                 _hasChanges = true;
                 AnsiConsole.MarkupLine($"[green]Gold set to {value}[/]");
             }
-            else if (choice.StartsWith("Set Shards"))
+            else if (choice.StartsWith("Set Shards Gained"))
             {
                 var value = AnsiConsole.Prompt(
                     new TextPrompt<int>("[yellow]Enter shards/dust amount:[/]")
@@ -450,7 +450,8 @@ public class SaveEditor
                 var heroes = string.Join(", ", new[] { run.Char0, run.Char1, run.Char2, run.Char3 }
                     .Where(h => !string.IsNullOrEmpty(h))
                     .Select(h => Reference.GetHeroDisplayName(h).Split('(')[0].Trim()));
-                choices.Add($"[{i}] Gold: {run.GoldGained}, Shards: {run.DustGained} ({heroes})");
+                // Escape brackets for Spectre.Console markup
+                choices.Add($"[[{i}]] Gold: {run.GoldGained}, Shards: {run.DustGained} ({heroes})");
             }
             choices.Add("Create New Reward Chest");
             choices.Add("Back");
@@ -468,7 +469,7 @@ public class SaveEditor
                 continue;
             }
 
-            // Parse index from choice
+            // Parse index from choice (format: [[0]] Gold: ...)
             var indexStr = choice.Split(']')[0].TrimStart('[');
             if (int.TryParse(indexStr, out int index) && index >= 0 && index < _runs.Count)
             {
