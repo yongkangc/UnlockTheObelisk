@@ -1,4 +1,4 @@
-# UnlockTheObelisk (Mac Fork)
+<img width="1151" height="959" alt="image" src="https://github.com/user-attachments/assets/f556fcf6-31f3-4747-b8d8-ea78b5ad2c67" /># UnlockTheObelisk (Mac Fork)
 
 Fork of the original UnlockTheObelisk with Mac support and an interactive TUI editor.
 
@@ -29,11 +29,14 @@ Launch the editor with just the save file path to get an interactive menu:
 ![TUI Main Menu](images/tui-main-menu.png)
 - **Heroes** - Select which heroes to unlock
 <img width="247" height="305" alt="image" src="https://github.com/user-attachments/assets/82adda79-287d-44f7-ab0c-215c2dbc02fa" />
+<img width="1655" height="984" alt="image" src="https://github.com/user-attachments/assets/c179664b-a087-4224-b5f4-ac7effe27390" />
+
 
 - **Town Upgrades** - Unlock by tier (1-6) or all
 - **Cards** - View and manage unlocked cards
 - **Currencies & Resources** - Set Supply, Perk Points, Hero Progress
 <img width="501" height="214" alt="image" src="https://github.com/user-attachments/assets/b71cf6f1-6aa8-425c-bcb0-312b4344c530" />
+<img width="1151" height="959" alt="image" src="https://github.com/user-attachments/assets/2b6d7a0b-c74a-4fa1-9b61-79cfc23a8f47" />
 
 - **Progression** - Toggle NG+ and set level
 - **Madness Levels** - Set Obelisk/Adventure/Singularity madness
