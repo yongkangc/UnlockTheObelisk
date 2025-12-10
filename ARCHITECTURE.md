@@ -183,6 +183,66 @@ string Char0, Char1, Char2, Char3;  // Heroes used
 // ... many more stats fields
 ```
 
+### Runs Deserialization Flow
+
+The `runs.ato` file stores reward chests as a serialized `List<PlayerRun>`:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         RUNS.ATO DESERIALIZATION                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌──────────────┐      DES Decrypt       ┌────────────────────────────────┐ │
+│  │  runs.ato    │ ─────────────────────▶ │  Decrypted binary stream       │ │
+│  │  (encrypted) │      (Key + IV)        │  (BinaryFormatter format)      │ │
+│  └──────────────┘                        └───────────────┬────────────────┘ │
+│                                                          │                  │
+│                                          BinaryFormatter.Deserialize()      │
+│                                                          │                  │
+│                                                          ▼                  │
+│                                          ┌────────────────────────────────┐ │
+│                                          │  List<PlayerRun>               │ │
+│                                          │  ┌──────────────────────────┐  │ │
+│                                          │  │ PlayerRun[0]             │  │ │
+│                                          │  │   Id: "abc-123"          │  │ │
+│                                          │  │   GoldGained: 5000       │  │ │
+│                                          │  │   DustGained: 500        │  │ │
+│                                          │  │   Char0: "archer"        │  │ │
+│                                          │  └──────────────────────────┘  │ │
+│                                          │  ┌──────────────────────────┐  │ │
+│                                          │  │ PlayerRun[1]             │  │ │
+│                                          │  │   ...                    │  │ │
+│                                          │  └──────────────────────────┘  │ │
+│                                          └────────────────────────────────┘ │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Critical**: BinaryFormatter embeds the full type name (namespace + assembly) in serialized data. For the game to read our modified `runs.ato`, we must use the game's actual `PlayerRun` class from `Assembly-CSharp.dll`, not a custom copy. This is why the project references the game's DLLs directly.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    TYPE MATCHING IN BINARYFORMATTER                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Serialized data contains:                                                  │
+│  ┌────────────────────────────────────────────────────────────────────┐    │
+│  │ TypeName: "PlayerRun, Assembly-CSharp, Version=0.0.0.0, ..."       │    │
+│  │ Fields: { Id="...", GoldGained=5000, ... }                         │    │
+│  └────────────────────────────────────────────────────────────────────┘    │
+│                                                                             │
+│  ✓ WORKS: Using game's PlayerRun from Assembly-CSharp.dll                  │
+│    - Types match exactly                                                    │
+│    - Game can deserialize our modified runs.ato                            │
+│                                                                             │
+│  ✗ FAILS: Using custom PlayerRun class in our namespace                    │
+│    - Serializes as "ATOUnlocker.Tui.PlayerRun, ATOUnlocker"                │
+│    - Game expects "PlayerRun, Assembly-CSharp"                             │
+│    - Type mismatch → deserialization fails silently                        │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
 ## Technical Flow
 
 ```
