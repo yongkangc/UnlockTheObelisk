@@ -15,6 +15,41 @@ Across the Obelisk is a Unity game written in C#. Key technical details:
 
 Unity games compile C# source code to IL (Intermediate Language), not native machine code. This makes reverse engineering straightforward:
 
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         UNITY GAME COMPILATION                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   Developer's C# Code              Compiled Game DLL                        │
+│   ┌─────────────────┐              ┌─────────────────┐                      │
+│   │ public class    │    Unity     │                 │                      │
+│   │ PlayerData {    │ ──Compile──▶ │  Assembly-      │                      │
+│   │   int gold;     │    (IL)      │  CSharp.dll     │                      │
+│   │   ...           │              │  (IL bytecode)  │                      │
+│   │ }               │              │                 │                      │
+│   └─────────────────┘              └────────┬────────┘                      │
+│                                             │                               │
+│                                             ▼                               │
+│                                    ┌─────────────────┐                      │
+│                                    │   ILSpy/dnSpy   │                      │
+│                                    │   Decompiler    │                      │
+│                                    └────────┬────────┘                      │
+│                                             │                               │
+│                                             ▼                               │
+│                                    ┌─────────────────┐                      │
+│                                    │ Recovered C#:   │                      │
+│                                    │ public class    │                      │
+│                                    │ PlayerData {    │  ◀── We can read    │
+│                                    │   int gold;     │      the exact       │
+│                                    │   ...           │      save format!    │
+│                                    │ }               │                      │
+│                                    └─────────────────┘                      │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Key insight**: Unlike C/C++ games that compile to native machine code (hard to reverse), Unity compiles to IL which preserves class names, field names, and types - making decompilation nearly perfect.
+
 1. **IL is Decompilable**: Tools like [ILSpy](https://github.com/icsharpcode/ILSpy) or [dnSpy](https://github.com/dnSpy/dnSpy) can decompile the game's DLLs back to readable C# code
 
 2. **Game DLLs Location**:
@@ -24,6 +59,46 @@ Unity games compile C# source code to IL (Intermediate Language), not native mac
 3. **Save Format Matches Code**: The save files are serialized C# objects. By decompiling `PlayerData`, `PlayerRun`, etc., we know exactly what fields exist and their types
 
 4. **Encryption Key in Code**: The DES encryption key and IV are hardcoded in the game's `SaveManager` class, easily extracted via decompilation
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    SAVE FILE REVERSE ENGINEERING                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌──────────────┐     Decompile      ┌──────────────────────────────────┐  │
+│  │ Assembly-    │ ─────────────────▶ │ class SaveManager {              │  │
+│  │ CSharp.dll   │                    │   byte[] Key = {0x01,0x02,...};  │  │
+│  └──────────────┘                    │   byte[] IV  = {0x0A,0x0B,...};  │  │
+│                                      │ }                                │  │
+│                                      └──────────────┬───────────────────┘  │
+│                                                     │                      │
+│                                        Extract Key & IV                    │
+│                                                     │                      │
+│                                                     ▼                      │
+│  ┌──────────────┐      Decrypt       ┌──────────────────────────────────┐  │
+│  │ player.ato   │ ─────────────────▶ │ Decrypted binary data            │  │
+│  │ (encrypted)  │   (DES + Key/IV)   │ (BinaryFormatter serialized)     │  │
+│  └──────────────┘                    └──────────────┬───────────────────┘  │
+│                                                     │                      │
+│                                        Deserialize                         │
+│                                                     │                      │
+│                                                     ▼                      │
+│                                      ┌──────────────────────────────────┐  │
+│                                      │ PlayerData object:               │  │
+│                                      │   gold = 5000                    │  │
+│                                      │   unlockedHeroes = [...]         │  │
+│                                      │   ...                            │  │
+│                                      └──────────────────────────────────┘  │
+│                                                     │                      │
+│                                          Modify & Re-serialize             │
+│                                                     │                      │
+│                                                     ▼                      │
+│                                      ┌──────────────────────────────────┐  │
+│                                      │ Modified player.ato saved!       │  │
+│                                      └──────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ## Save File Structure
 
