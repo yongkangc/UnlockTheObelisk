@@ -33,6 +33,9 @@ Launch the editor with just the save file path to get an interactive menu:
 - **Madness Levels** - Set Obelisk/Adventure/Singularity madness
 - **Unlock All** - Quick option to max everything
 
+<img width="243" height="302" alt="image" src="https://github.com/user-attachments/assets/d62eac90-8533-4505-9ed4-feece9a5f274" />
+
+
 ### CLI Mode
 Pass arguments directly for quick unlocks without the interactive menu.
 
