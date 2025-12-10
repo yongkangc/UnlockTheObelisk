@@ -241,21 +241,50 @@ public static class Program
             var runs = ATOUnlocker.Tui.SaveManager.LoadRuns(runsPath);
             AnsiConsole.MarkupLine($"[grey]Existing runs: {runs.Count}[/]");
 
+            // Generate ID in game's format: SEED_SCORE_SCORE
+            var seed = GenerateRandomSeed();
+            var gold = 2000;
+            var dust = 2000;
+            var score = gold + dust;
+
             var newRun = new PlayerRun
             {
-                Id = Guid.NewGuid().ToString(),
-                GoldGained = 50000,
-                DustGained = 10000,
-                TotalGoldGained = 50000,
-                TotalDustGained = 10000,
-                Version = "1.0",
-                gameDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
-                Char0 = "archer",
+                Id = $"{seed}_{score}_{score}",
+                GoldGained = gold,
+                DustGained = dust,
+                TotalGoldGained = gold,
+                TotalDustGained = dust,
+                Version = "1.7.0",  // Match game version
+                gameDate = DateTime.Now.ToString("M/d/yyyy h:mm:ss tt"),  // Match game's date format
+                Char0 = "mercenary",
+                FinalScore = score,
+                // Initialize arrays to empty (will be serialized as [] in JSON)
+                CombatStats0 = new int[0],
+                CombatStats1 = new int[0],
+                CombatStats2 = new int[0],
+                CombatStats3 = new int[0],
+                // Initialize lists to empty
+                VisitedNodes = new List<string>(),
+                VisitedNodesAction = new List<string>(),
+                BossesKilledName = new List<string>(),
+                UnlockedCards = new List<string>(),
+                Char0Cards = new List<string>(),
+                Char0Items = new List<string>(),
+                Char0Traits = new List<string>(),
+                Char1Cards = new List<string>(),
+                Char1Items = new List<string>(),
+                Char1Traits = new List<string>(),
+                Char2Cards = new List<string>(),
+                Char2Items = new List<string>(),
+                Char2Traits = new List<string>(),
+                Char3Cards = new List<string>(),
+                Char3Items = new List<string>(),
+                Char3Traits = new List<string>(),
             };
 
             runs.Add(newRun);
             ATOUnlocker.Tui.SaveManager.SaveRuns(runsPath, runs);
-            AnsiConsole.MarkupLine($"[green]Created test run with 50000 gold and 10000 shards![/]");
+            AnsiConsole.MarkupLine($"[green]Created test run with {gold} gold and {dust} shards![/]");
             AnsiConsole.MarkupLine($"[grey]Total runs now: {runs.Count}[/]");
         }
         catch (Exception ex)
@@ -263,6 +292,18 @@ public static class Program
             AnsiConsole.MarkupLine($"[red]Error: {ex.Message}[/]");
             AnsiConsole.MarkupLine($"[grey]{ex}[/]");
         }
+    }
+
+    private static string GenerateRandomSeed()
+    {
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        var random = new Random();
+        var result = new char[7];
+        for (int i = 0; i < 7; i++)
+        {
+            result[i] = chars[random.Next(chars.Length)];
+        }
+        return new string(result);
     }
 
     private static void RunCliMode(string[] args)

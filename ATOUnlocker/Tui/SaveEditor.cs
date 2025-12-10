@@ -43,7 +43,7 @@ public class SaveEditor
                         "Currencies & Resources",
                         "Progression",
                         "Madness Levels",
-                        $"Reward Chests ({_runs.Count})",
+                        $"Reward Chests ({_runs.Count}/3)",
                         "[cyan]Edit Active Run (In-Game Gold/Shards)[/]",
                         "Unlock All",
                         hasAnyChanges ? "[green]Save & Exit[/]" : "Exit"
@@ -172,6 +172,7 @@ public class SaveEditor
                     .AddChoices(new[]
                     {
                         "View Current Cards",
+                        "Unlock Specific Card",
                         "Unlock Pet Cards",
                         "Unlock All Cards (from Reference)",
                         "Back"
@@ -211,6 +212,10 @@ public class SaveEditor
                 }
                 AnsiConsole.Markup("[grey]Press any key to continue...[/]");
                 SystemConsole.ReadKey(true);
+            }
+            else if (choice == "Unlock Specific Card")
+            {
+                UnlockSpecificCardMenu();
             }
             else if (choice == "Unlock Pet Cards")
             {
@@ -266,6 +271,62 @@ public class SaveEditor
         _hasChanges = true;
         AnsiConsole.MarkupLine($"[green]Selected {selectedPets.Count} pets![/]");
         Thread.Sleep(500);
+    }
+
+    private void UnlockSpecificCardMenu()
+    {
+        var currentCards = _playerData.UnlockedCards ?? new List<string>();
+
+        AnsiConsole.MarkupLine("[grey]Enter card ID(s) to unlock. Separate multiple IDs with commas.[/]");
+        AnsiConsole.MarkupLine("[grey]Examples: fireball, icebolt, heal[/]");
+        AnsiConsole.MarkupLine("[grey]Tip: Card IDs are lowercase, no spaces (e.g., 'faststrike', 'sharpdagger')[/]\n");
+
+        var input = AnsiConsole.Prompt(
+            new TextPrompt<string>("[yellow]Card ID(s):[/]")
+                .AllowEmpty());
+
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            AnsiConsole.MarkupLine("[grey]No cards entered.[/]");
+            Thread.Sleep(500);
+            return;
+        }
+
+        var cardIds = input.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(id => id.Trim().ToLowerInvariant())
+            .Where(id => !string.IsNullOrEmpty(id))
+            .ToList();
+
+        var newCards = new HashSet<string>(currentCards);
+        var added = new List<string>();
+        var alreadyUnlocked = new List<string>();
+
+        foreach (var cardId in cardIds)
+        {
+            if (newCards.Contains(cardId))
+            {
+                alreadyUnlocked.Add(cardId);
+            }
+            else
+            {
+                newCards.Add(cardId);
+                added.Add(cardId);
+            }
+        }
+
+        if (added.Count > 0)
+        {
+            _playerData.UnlockedCards = newCards.ToList();
+            _hasChanges = true;
+            AnsiConsole.MarkupLine($"[green]Added {added.Count} card(s): {string.Join(", ", added)}[/]");
+        }
+
+        if (alreadyUnlocked.Count > 0)
+        {
+            AnsiConsole.MarkupLine($"[grey]Already unlocked: {string.Join(", ", alreadyUnlocked)}[/]");
+        }
+
+        Thread.Sleep(800);
     }
 
     private void ResourcesMenu()
@@ -542,6 +603,15 @@ public class SaveEditor
 
     private void CreateNewRewardChest()
     {
+        // Game only allows up to 3 reward chests
+        if (_runs.Count >= 3)
+        {
+            AnsiConsole.MarkupLine("[red]Cannot create more than 3 reward chests.[/]");
+            AnsiConsole.MarkupLine("[grey]Delete an existing chest first, or claim them in-game.[/]");
+            Thread.Sleep(1000);
+            return;
+        }
+
         var gold = AnsiConsole.Prompt(
             new TextPrompt<int>("[yellow]Enter gold amount:[/]")
                 .DefaultValue(10000)
@@ -552,16 +622,44 @@ public class SaveEditor
                 .DefaultValue(1000)
                 .Validate(v => v >= 0 ? ValidationResult.Success() : ValidationResult.Error("Must be >= 0")));
 
+        // Generate ID in game's format: SEED_SCORE_SCORE
+        var seed = GenerateRandomSeed();
+        var score = gold + dust;
+        var id = $"{seed}_{score}_{score}";
+
         var newRun = new PlayerRun
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = id,
             GoldGained = gold,
             DustGained = dust,
             TotalGoldGained = gold,
             TotalDustGained = dust,
-            Version = "1.0",
-            gameDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
-            Char0 = "archer",  // Default hero
+            Version = "1.7.0",  // Match game version
+            gameDate = DateTime.Now.ToString("M/d/yyyy h:mm:ss tt"),  // Match game's date format
+            Char0 = "mercenary",  // Default hero
+            FinalScore = score,
+            // Initialize arrays to empty (will be serialized as [] in JSON)
+            CombatStats0 = new int[0],
+            CombatStats1 = new int[0],
+            CombatStats2 = new int[0],
+            CombatStats3 = new int[0],
+            // Initialize lists to empty
+            VisitedNodes = new List<string>(),
+            VisitedNodesAction = new List<string>(),
+            BossesKilledName = new List<string>(),
+            UnlockedCards = new List<string>(),
+            Char0Cards = new List<string>(),
+            Char0Items = new List<string>(),
+            Char0Traits = new List<string>(),
+            Char1Cards = new List<string>(),
+            Char1Items = new List<string>(),
+            Char1Traits = new List<string>(),
+            Char2Cards = new List<string>(),
+            Char2Items = new List<string>(),
+            Char2Traits = new List<string>(),
+            Char3Cards = new List<string>(),
+            Char3Items = new List<string>(),
+            Char3Traits = new List<string>(),
         };
 
         _runs.Add(newRun);
@@ -801,6 +899,22 @@ public class SaveEditor
             }
         }
         return upgrades;
+    }
+
+    /// <summary>
+    /// Generate a random seed string like the game uses (7 uppercase letters).
+    /// Example: "ZY2QEFK"
+    /// </summary>
+    private static string GenerateRandomSeed()
+    {
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        var random = new Random();
+        var result = new char[7];
+        for (int i = 0; i < 7; i++)
+        {
+            result[i] = chars[random.Next(chars.Length)];
+        }
+        return new string(result);
     }
 
     private void SaveChanges()

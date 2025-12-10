@@ -187,3 +187,47 @@ C:\Users\USER_NAME\AppData\LocalLow\Dreamsite Games\AcrossTheObelisk\STEAM_ID\pl
 ```
 .\ATOUnlocker.exe "PATH_TO_player.ato" town perks heroes
 ```
+
+---
+
+## FAQ / Troubleshooting
+
+### Game UI broken or not loading after editing
+
+**Symptoms:** Game launches but UI elements don't appear, black screen, or game crashes.
+
+**Cause:** Corrupted save file, usually `runs.ato`. This can happen if the save data contains serialized objects that the game can't deserialize (e.g., type mismatches from older editor versions).
+
+**Fix:**
+```bash
+# Restore from full backup (if you have one)
+make restore-full
+
+# Or manually remove the corrupted file and let game recreate it
+cd ~/Library/Application\ Support/Dreamsite\ Games/AcrossTheObelisk/YOUR_STEAM_ID/
+mv runs.ato runs.ato.broken      # Remove corrupted runs
+mv player.ato player.ato.broken  # Optional: also restore player.ato
+cp player_backup.ato player.ato  # Restore from backup
+```
+
+**Prevention:** Always run `make backup-full` before editing saves.
+
+### Reward chests not appearing in game
+
+**Symptoms:** Created reward chests via TUI but they don't show up in town.
+
+**Possible causes:**
+1. **Editing during active run** - Return to town first, then edit
+2. **Type mismatch** - Older editor versions had a bug where `PlayerRun` was serialized with wrong type name. Update to latest version.
+3. **Corrupted runs.ato** - Delete `runs.ato` and let game recreate it
+
+### "Set Gold/Shards" doesn't give me starting resources
+
+**This is expected behavior.** The Resources menu edits *lifetime statistics* (total ever earned), not starting resources.
+
+To get gold/shards at the start of a run:
+1. Use **Reward Chests** menu to create a chest
+2. Save & Exit
+3. In-game, click chest icons in town (top-right) before starting a new run
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for technical details on how the game stores different types of data.
