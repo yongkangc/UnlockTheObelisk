@@ -33,7 +33,7 @@ Launch the editor with just the save file path to get an interactive menu:
 ![TUI Main Menu](images/tui-main-menu.png)
 - **Heroes** - Select which heroes to unlock
 <img width="247" height="305" alt="image" src="https://github.com/user-attachments/assets/82adda79-287d-44f7-ab0c-215c2dbc02fa" />
-<img width="1655" height="984" alt="image" src="https://github.com/user-attachments/assets/c179664b-a087-4224-b5f4-ac7effe27390" />
+<img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/c179664b-a087-4224-b5f4-ac7effe27390" />
 
 
 - **Town Upgrades** - Unlock by tier (1-6) or all
@@ -45,8 +45,11 @@ Launch the editor with just the save file path to get an interactive menu:
 - **Progression** - Toggle NG+ and set level
 - **Madness Levels** - Set Obelisk/Adventure/Singularity madness
 - **Unlock All** - Quick option to max everything
+<img width="935" height="160" alt="image" src="https://github.com/user-attachments/assets/019e527f-1fd7-41e6-bc52-1f797eb94fe0" />
+
+
 - **Reward Chests** - Create/edit reward chests claimable in town
-<img width="358" height="273" alt="image" src="https://github.com/user-attachments/assets/bf4c99a7-5033-4b6c-aa78-193152c4ea29" />
+<img width="361" height="366" alt="image" src="https://github.com/user-attachments/assets/4b9ef696-5ba1-403a-912e-5021b379b4d8" />
 
 
 ### Important Notes
