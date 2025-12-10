@@ -1,4 +1,6 @@
-<img width="1151" height="959" alt="image" src="https://github.com/user-attachments/assets/f556fcf6-31f3-4747-b8d8-ea78b5ad2c67" /># UnlockTheObelisk (Mac Fork)
+<img width="1151" height="959" alt="image" src="https://github.com/user-attachments/assets/f556fcf6-31f3-4747-b8d8-ea78b5ad2c67" />
+
+# UnlockTheObelisk (Mac Fork)
 
 Fork of the original UnlockTheObelisk with Mac support and an interactive TUI editor.
 
