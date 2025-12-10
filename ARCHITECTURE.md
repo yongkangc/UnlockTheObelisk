@@ -113,16 +113,46 @@ Save files are located at:
 | `player.ato` | Main progression data | `PlayerData` |
 | `runs.ato` | Completed runs / reward chests | `List<PlayerRun>` |
 | `perks.ato` | Perk configuration | Perk data |
+| `gamedata_0.ato` | Active run slot 0 | `GameData` |
+| `gamedata_1.ato` | Active run slot 1 | `GameData` |
 
 All files use the same DES encryption with identical key/IV.
+
+### Active Runs vs Town State
+
+> ⚠️ **Do not edit saves during an active run.** Always return to town or exit to main menu before editing.
+
+The game maintains separate state for:
+- **Town/Progression** (`player.ato`) - Persistent unlocks, currencies, statistics
+- **Active Runs** (`gamedata_*.ato`) - Current run's gold, items, map progress
+
+When a run is in progress, the game loads from `gamedata_*.ato`. Edits to `player.ato` won't affect an active run. Always complete or abandon runs before editing.
+
+### Field Naming Conventions
+
+PlayerData uses a consistent naming pattern:
+- `xxxActual` = Current spendable balance (e.g., `supplyActual`)
+- `xxxGained` = Lifetime statistics, total ever earned (e.g., `goldGained`, `dustGained`)
+
+**Important**: Gold and Shards only have "Gained" fields - they are lifetime statistics displayed in your profile, NOT starting resources for runs. There is no `goldActual` or `dustActual`.
+
+### How Starting Gold/Shards Work
+
+Gold and shards for new runs come from **reward chests** stored in `runs.ato`:
+1. Complete a run → game creates a reward chest with % of collected gold/shards
+2. Up to 3 chests can be stored in town
+3. Before starting a new run, click chest icons in town (top-right) to claim
+4. Claimed gold/shards become your starting resources for the next run
+
+To give yourself starting resources, create reward chests via the TUI's "Reward Chests" menu.
 
 ### PlayerData Fields (partial list)
 
 ```csharp
 // Currencies
 int supplyActual;        // Supply currency (spendable)
-int goldGained;          // Lifetime gold earned
-int dustGained;          // Lifetime shards earned
+int goldGained;          // Lifetime gold earned (statistics only)
+int dustGained;          // Lifetime shards earned (statistics only)
 int playerRankProgress;  // Perk points
 
 // Progression

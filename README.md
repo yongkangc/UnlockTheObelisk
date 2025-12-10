@@ -38,9 +38,19 @@ Launch the editor with just the save file path to get an interactive menu:
 - **Progression** - Toggle NG+ and set level
 - **Madness Levels** - Set Obelisk/Adventure/Singularity madness
 - **Unlock All** - Quick option to max everything
-- **Reward Chest** - Quick option to max everything
+- **Reward Chests** - Create/edit reward chests claimable in town
 <img width="478" height="172" alt="image" src="https://github.com/user-attachments/assets/9b6cd8b3-eaee-44c0-8747-e6f32cdd1132" />
 
+### Important Notes
+
+> ⚠️ **Do not edit saves during an active run.** Always return to town or exit to main menu before editing. The game saves separately for runs in progress and changes may not apply or could cause issues.
+
+**Starting Gold/Shards for New Runs:**
+The "Set Gold/Shards" options in the Resources menu edit *lifetime statistics* (total ever earned), not your starting resources. To get gold and shards at the start of a new adventure:
+1. Select **Reward Chests** from the main menu
+2. Create a new chest with your desired gold/shards amounts
+3. Save & Exit
+4. In-game, go to Town and click the **chest icons** (top-right) to claim before starting a new run
 
 ### CLI Mode
 Pass arguments directly for quick unlocks without the interactive menu.

@@ -34,7 +34,7 @@ public class SaveEditor
             var choice = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
                     .Title("[yellow]Main Menu[/]")
-                    .PageSize(12)
+                    .PageSize(14)
                     .AddChoices(new[]
                     {
                         "Heroes",
@@ -44,6 +44,7 @@ public class SaveEditor
                         "Progression",
                         "Madness Levels",
                         $"Reward Chests ({_runs.Count})",
+                        "[cyan]Edit Active Run (In-Game Gold/Shards)[/]",
                         "Unlock All",
                         hasAnyChanges ? "[green]Save & Exit[/]" : "Exit"
                     }));
@@ -51,6 +52,12 @@ public class SaveEditor
             if (choice.StartsWith("Reward Chests"))
             {
                 RewardChestMenu();
+                continue;
+            }
+
+            if (choice.Contains("Edit Active Run"))
+            {
+                ActiveRunMenu();
                 continue;
             }
 
@@ -614,6 +621,132 @@ public class SaveEditor
                     return;
                 }
             }
+            Thread.Sleep(300);
+        }
+    }
+
+    private void ActiveRunMenu()
+    {
+        var saveDir = Path.GetDirectoryName(_atoPath)!;
+        var gameDataFiles = Directory.GetFiles(saveDir, "gamedata_*.ato");
+
+        if (gameDataFiles.Length == 0)
+        {
+            AnsiConsole.MarkupLine("[yellow]No active runs found. Start a game first.[/]");
+            Thread.Sleep(1000);
+            return;
+        }
+
+        // Build list of active runs
+        var runChoices = new List<string>();
+        var gameDataList = new List<(string path, GameData data)>();
+
+        foreach (var file in gameDataFiles)
+        {
+            var gameData = SaveManager.LoadGameData(file);
+            if (gameData != null)
+            {
+                gameDataList.Add((file, gameData));
+                var filename = Path.GetFileName(file);
+                var slot = filename.Replace("gamedata_", "").Replace(".ato", "");
+                var gold = GetGameDataField<int>(gameData, "playerGold");
+                var dust = GetGameDataField<int>(gameData, "playerDust");
+                var date = GetGameDataField<string>(gameData, "gameDate") ?? "unknown";
+                runChoices.Add($"Slot {slot}: Gold={gold}, Shards={dust} ({date})");
+            }
+        }
+
+        if (runChoices.Count == 0)
+        {
+            AnsiConsole.MarkupLine("[yellow]Could not load any game data files.[/]");
+            Thread.Sleep(1000);
+            return;
+        }
+
+        runChoices.Add("Back");
+
+        var choice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[cyan]Select Active Run to Edit[/]")
+                .PageSize(10)
+                .AddChoices(runChoices));
+
+        if (choice == "Back") return;
+
+        // Find selected game data
+        var selectedIndex = runChoices.IndexOf(choice);
+        if (selectedIndex >= 0 && selectedIndex < gameDataList.Count)
+        {
+            EditActiveRun(gameDataList[selectedIndex].path, gameDataList[selectedIndex].data);
+        }
+    }
+
+    private static T? GetGameDataField<T>(GameData gameData, string fieldName)
+    {
+        var type = gameData.GetType();
+        var field = type.GetField(fieldName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        if (field != null)
+        {
+            var value = field.GetValue(gameData);
+            if (value is T typedValue)
+                return typedValue;
+        }
+        return default;
+    }
+
+    private static void SetGameDataField<T>(GameData gameData, string fieldName, T value)
+    {
+        var type = gameData.GetType();
+        var field = type.GetField(fieldName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        field?.SetValue(gameData, value);
+    }
+
+    private void EditActiveRun(string path, GameData gameData)
+    {
+        while (true)
+        {
+            var currentGold = GetGameDataField<int>(gameData, "playerGold");
+            var currentDust = GetGameDataField<int>(gameData, "playerDust");
+
+            var choice = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title($"[cyan]Edit Active Run[/] [grey]({Path.GetFileName(path)})[/]")
+                    .AddChoices(new[]
+                    {
+                        $"Set Gold (Current: {currentGold})",
+                        $"Set Shards/Dust (Current: {currentDust})",
+                        "Back"
+                    }));
+
+            if (choice == "Back") return;
+
+            if (choice.StartsWith("Set Gold"))
+            {
+                var value = AnsiConsole.Prompt(
+                    new TextPrompt<int>("[yellow]Enter gold amount:[/]")
+                        .DefaultValue(currentGold)
+                        .Validate(v => v >= 0 ? ValidationResult.Success() : ValidationResult.Error("Must be >= 0")));
+
+                SetGameDataField(gameData, "playerGold", value);
+                var totalGold = GetGameDataField<int>(gameData, "totalGoldGained");
+                SetGameDataField(gameData, "totalGoldGained", Math.Max(totalGold, value));
+                SaveManager.SaveGameData(path, gameData);
+                AnsiConsole.MarkupLine($"[green]Gold set to {value} and saved![/]");
+            }
+            else if (choice.StartsWith("Set Shards"))
+            {
+                var value = AnsiConsole.Prompt(
+                    new TextPrompt<int>("[yellow]Enter shards/dust amount:[/]")
+                        .DefaultValue(currentDust)
+                        .Validate(v => v >= 0 ? ValidationResult.Success() : ValidationResult.Error("Must be >= 0")));
+
+                SetGameDataField(gameData, "playerDust", value);
+                var totalDust = GetGameDataField<int>(gameData, "totalDustGained");
+                SetGameDataField(gameData, "totalDustGained", Math.Max(totalDust, value));
+                SaveManager.SaveGameData(path, gameData);
+                AnsiConsole.MarkupLine($"[green]Shards/Dust set to {value} and saved![/]");
+            }
+
             Thread.Sleep(300);
         }
     }

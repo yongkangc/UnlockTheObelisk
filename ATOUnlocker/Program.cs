@@ -54,6 +54,27 @@ public static class Program
         // Determine mode: TUI (default) or CLI (if additional args provided)
         var additionalArgs = args.Skip(1).ToArray();
 
+        // Check for debug-runs flag
+        if (additionalArgs.Contains("debug-runs"))
+        {
+            DebugRuns();
+            return;
+        }
+
+        // Check for test-create-run flag
+        if (additionalArgs.Contains("test-create-run"))
+        {
+            TestCreateRun();
+            return;
+        }
+
+        // Check for debug-gamedata flag
+        if (additionalArgs.Contains("debug-gamedata"))
+        {
+            DebugGameData();
+            return;
+        }
+
         // Check for CLI mode flags
         bool cliMode = additionalArgs.Any(a => a == "perks" || a == "heroes" || a == "town" || a == "--cli");
 
@@ -77,6 +98,170 @@ public static class Program
         catch (Exception ex)
         {
             AnsiConsole.MarkupLine($"[red]Error: {ex.Message}[/]");
+        }
+    }
+
+    private static void DebugRuns()
+    {
+        var runsPath = Path.Combine(Path.GetDirectoryName(AtoPath)!, "runs.ato");
+        AnsiConsole.MarkupLine($"[grey]Runs file: {runsPath}[/]");
+
+        // List Run-related types in game assembly
+        try
+        {
+            var asm = Assembly.Load("Assembly-CSharp");
+            AnsiConsole.MarkupLine($"[grey]Game assembly types containing 'Run':[/]");
+            foreach (var t in asm.GetTypes())
+            {
+                if (t.Name.ToLower().Contains("run") && !t.Name.Contains("Runtime") && !t.IsInterface)
+                {
+                    AnsiConsole.MarkupLine($"[grey]  {t.FullName}[/]");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Error listing types: {ex.Message}[/]");
+        }
+
+        if (!File.Exists(runsPath))
+        {
+            AnsiConsole.MarkupLine("[yellow]runs.ato not found[/]");
+            return;
+        }
+
+        try
+        {
+            var runs = ATOUnlocker.Tui.SaveManager.LoadRuns(runsPath);
+            AnsiConsole.MarkupLine($"[green]Found {runs.Count} runs:[/]");
+            for (int i = 0; i < runs.Count; i++)
+            {
+                var r = runs[i];
+                var heroes = string.Join(", ", new[] { r.Char0, r.Char1, r.Char2, r.Char3 }
+                    .Where(h => !string.IsNullOrEmpty(h)));
+                AnsiConsole.MarkupLine($"  [[{i}]] Gold: {r.GoldGained}, Dust: {r.DustGained}, Heroes: {heroes}");
+                AnsiConsole.MarkupLine($"       Id: {r.Id}, Date: {r.gameDate}");
+            }
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Error loading runs: {ex.Message}[/]");
+            AnsiConsole.MarkupLine($"[grey]{ex.GetType().Name}[/]");
+        }
+    }
+
+    private static void DebugGameData()
+    {
+        var saveDir = Path.GetDirectoryName(AtoPath)!;
+
+        // List game data related types
+        try
+        {
+            var asm = Assembly.Load("Assembly-CSharp");
+            AnsiConsole.MarkupLine($"[yellow]Types containing 'Game' or 'Save' or 'Data':[/]");
+            foreach (var t in asm.GetTypes())
+            {
+                var name = t.Name.ToLower();
+                if ((name.Contains("game") || name.Contains("save") || name.Contains("data"))
+                    && !name.Contains("runtime") && !t.IsInterface && t.IsSerializable)
+                {
+                    AnsiConsole.MarkupLine($"[grey]  {t.FullName}[/]");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Error listing types: {ex.Message}[/]");
+        }
+
+        // Try to read gamedata files
+        var gameDataFiles = Directory.GetFiles(saveDir, "gamedata_*.ato");
+        AnsiConsole.MarkupLine($"\n[yellow]Found {gameDataFiles.Length} gamedata files:[/]");
+
+        foreach (var file in gameDataFiles)
+        {
+            AnsiConsole.MarkupLine($"[grey]  {Path.GetFileName(file)} ({new FileInfo(file).Length} bytes)[/]");
+
+            // Try to deserialize and identify the type
+            try
+            {
+                using var fs = new FileStream(file, FileMode.Open);
+                var des = new DESCryptoServiceProvider();
+                #pragma warning disable SYSLIB0021
+                var cs = new CryptoStream(fs, des.CreateDecryptor(Cryptography.Key, Cryptography.IV), CryptoStreamMode.Read);
+                #pragma warning restore SYSLIB0021
+
+                var bf = new BinaryFormatter();
+                #pragma warning disable SYSLIB0011
+                var obj = bf.Deserialize(cs);
+                #pragma warning restore SYSLIB0011
+
+                AnsiConsole.MarkupLine($"[green]    Type: {obj.GetType().FullName}[/]");
+
+                // Try to find gold/shards properties
+                var type = obj.GetType();
+                var goldField = type.GetField("gold") ?? type.GetField("Gold") ?? type.GetField("currentGold");
+                var dustField = type.GetField("dust") ?? type.GetField("Dust") ?? type.GetField("shards");
+
+                if (goldField != null)
+                    AnsiConsole.MarkupLine($"[green]    Gold: {goldField.GetValue(obj)}[/]");
+                if (dustField != null)
+                    AnsiConsole.MarkupLine($"[green]    Dust: {dustField.GetValue(obj)}[/]");
+
+                // List ALL fields including private
+                AnsiConsole.MarkupLine($"[grey]    All fields (including private):[/]");
+                var allFields = type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                AnsiConsole.MarkupLine($"[grey]    Found {allFields.Length} fields[/]");
+                foreach (var field in allFields)
+                {
+                    try
+                    {
+                        var val = field.GetValue(obj);
+                        var valStr = val?.ToString() ?? "null";
+                        if (valStr.Length > 50) valStr = valStr.Substring(0, 47) + "...";
+                        AnsiConsole.MarkupLine($"[grey]      {field.Name} ({field.FieldType.Name}) = {valStr}[/]");
+                    }
+                    catch { }
+                }
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.MarkupLine($"[red]    Error: {ex.Message}[/]");
+            }
+        }
+    }
+
+    private static void TestCreateRun()
+    {
+        var runsPath = Path.Combine(Path.GetDirectoryName(AtoPath)!, "runs.ato");
+        AnsiConsole.MarkupLine($"[grey]Creating test run in: {runsPath}[/]");
+
+        try
+        {
+            var runs = ATOUnlocker.Tui.SaveManager.LoadRuns(runsPath);
+            AnsiConsole.MarkupLine($"[grey]Existing runs: {runs.Count}[/]");
+
+            var newRun = new PlayerRun
+            {
+                Id = Guid.NewGuid().ToString(),
+                GoldGained = 50000,
+                DustGained = 10000,
+                TotalGoldGained = 50000,
+                TotalDustGained = 10000,
+                Version = "1.0",
+                gameDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                Char0 = "archer",
+            };
+
+            runs.Add(newRun);
+            ATOUnlocker.Tui.SaveManager.SaveRuns(runsPath, runs);
+            AnsiConsole.MarkupLine($"[green]Created test run with 50000 gold and 10000 shards![/]");
+            AnsiConsole.MarkupLine($"[grey]Total runs now: {runs.Count}[/]");
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Error: {ex.Message}[/]");
+            AnsiConsole.MarkupLine($"[grey]{ex}[/]");
         }
     }
 
