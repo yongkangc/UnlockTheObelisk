@@ -454,3 +454,272 @@ Across The Obelisk sits at the EASIEST end of the spectrum
 5. **No Protection = No Effort**: Indie games often skip expensive DRM solutions
 
 The game developers likely made a conscious choice: implementing robust DRM costs development time and money, and determined pirates will crack it anyway. They focused on making a good game instead of fighting an unwinnable battle against piracy.
+
+---
+
+## What Are IL Instructions?
+
+IL (Intermediate Language) is the "assembly language" of .NET. When you compile C#, it becomes IL bytecode - a set of simple stack-based instructions.
+
+### IL Is A Stack Machine
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    HOW IL EXECUTES CODE                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  IL uses an "evaluation stack" - values are pushed on, operated on,        │
+│  and popped off. Like a stack of plates.                                   │
+│                                                                             │
+│  Example: return 1 + 2;                                                    │
+│                                                                             │
+│  Step 1: ldc.i4.1          Step 2: ldc.i4.2          Step 3: add           │
+│  (load constant 1)         (load constant 2)         (add top two)         │
+│                                                                             │
+│  ┌─────────────┐           ┌─────────────┐           ┌─────────────┐       │
+│  │             │           │      2      │           │             │       │
+│  │      1      │           │      1      │           │      3      │       │
+│  └─────────────┘           └─────────────┘           └─────────────┘       │
+│     Stack: [1]              Stack: [1, 2]             Stack: [3]           │
+│                                                                             │
+│  Step 4: ret                                                               │
+│  (return top of stack)                                                     │
+│                                                                             │
+│  Returns 3 to caller!                                                      │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Common IL Instructions
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    IL INSTRUCTION REFERENCE                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  LOADING VALUES (push onto stack):                                         │
+│  ─────────────────────────────────                                          │
+│  ldc.i4.0      Load constant 0 (int)       │  Used for: false, zero        │
+│  ldc.i4.1      Load constant 1 (int)       │  Used for: true, one          │
+│  ldc.i4.s X    Load constant X (int)       │  Small constants (-128 to 127)│
+│  ldc.i4 X      Load constant X (int)       │  Any 32-bit integer           │
+│  ldstr "..."   Load string literal         │  String constants             │
+│  ldarg.0       Load argument 0 (this)      │  Instance method's 'this'     │
+│  ldarg.1       Load argument 1             │  First parameter              │
+│  ldloc.0       Load local variable 0       │  First local variable         │
+│                                                                             │
+│  STORING VALUES (pop from stack):                                          │
+│  ────────────────────────────────                                           │
+│  stloc.0       Store to local variable 0   │  Save result temporarily      │
+│  starg.1       Store to argument 1         │  Modify parameter             │
+│                                                                             │
+│  CALLING METHODS:                                                          │
+│  ────────────────                                                           │
+│  call          Call static/known method    │  Direct call, compile-time    │
+│  callvirt      Call virtual method         │  Through vtable, polymorphism │
+│                                                                             │
+│  CONTROL FLOW:                                                             │
+│  ─────────────                                                              │
+│  br.s X        Branch (jump) to X          │  Unconditional goto           │
+│  brtrue.s X    Branch if true              │  if (condition) goto X        │
+│  brfalse.s X   Branch if false             │  if (!condition) goto X       │
+│  beq.s X       Branch if equal             │  if (a == b) goto X           │
+│                                                                             │
+│  RETURN:                                                                   │
+│  ───────                                                                    │
+│  ret           Return from method          │  Pops value and returns it    │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Our Patch Explained Step By Step
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    PATCHED METHOD: return true;                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  C# Code:                                                                  │
+│  ┌───────────────────────────────────┐                                     │
+│  │  public bool PlayerHaveDLC(...)   │                                     │
+│  │  {                                │                                     │
+│  │      return true;                 │                                     │
+│  │  }                                │                                     │
+│  └───────────────────────────────────┘                                     │
+│                                                                             │
+│  IL Bytecode:                                                              │
+│  ┌───────────────────────────────────┐                                     │
+│  │  IL_0000: ldc.i4.1                │  ◄── Push integer 1 onto stack     │
+│  │  IL_0001: ret                     │  ◄── Return top of stack           │
+│  └───────────────────────────────────┘                                     │
+│                                                                             │
+│  Execution:                                                                │
+│                                                                             │
+│  1. ldc.i4.1 executes:                2. ret executes:                     │
+│     ┌─────────────┐                      ┌─────────────┐                   │
+│     │      1      │ ◄── pushed           │             │ ◄── popped        │
+│     └─────────────┘                      └─────────────┘                   │
+│        Stack: [1]                         Return value: 1 (true)           │
+│                                                                             │
+│  Why this works:                                                           │
+│  • In .NET, bool is just an int (0 = false, non-zero = true)              │
+│  • ldc.i4.1 pushes 1 (true) onto the stack                                │
+│  • ret pops it and returns to caller                                      │
+│  • Caller receives true, thinks player owns DLC!                          │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### IL vs x86 Assembly Comparison
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    IL vs NATIVE ASSEMBLY                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Task: return true;                                                        │
+│                                                                             │
+│  .NET IL (what we patch):           x86-64 Assembly (native code):         │
+│  ┌──────────────────────┐           ┌──────────────────────────────────┐   │
+│  │ ldc.i4.1             │           │ mov eax, 1    ; put 1 in eax     │   │
+│  │ ret                  │           │ ret           ; return eax       │   │
+│  └──────────────────────┘           └──────────────────────────────────┘   │
+│                                                                             │
+│  Hex bytes:                         Hex bytes:                             │
+│  17 2A                              B8 01 00 00 00 C3                      │
+│  (2 bytes!)                         (6 bytes)                              │
+│                                                                             │
+│  READABILITY:                                                              │
+│  ┌──────────────────────┐           ┌──────────────────────────────────┐   │
+│  │ IL: Fully named      │           │ x86: Just bytes                  │   │
+│  │ "ldc.i4.1" = clear   │           │ "B8 01 00 00 00" = ???           │   │
+│  │ Has type info        │           │ No type info                     │   │
+│  │ Stack-based (simple) │           │ Register-based (complex)         │   │
+│  └──────────────────────┘           └──────────────────────────────────┘   │
+│                                                                             │
+│  This is why IL is so much easier to reverse engineer!                    │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### How Mono.Cecil Modifies IL
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    MONO.CECIL PATCHING PROCESS                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  1. LOAD: Read DLL into memory                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  AssemblyDefinition.ReadAssembly("Assembly-CSharp.dll")             │   │
+│  │                                                                     │   │
+│  │  Creates object tree:                                               │   │
+│  │  Assembly                                                           │   │
+│  │    └── Module                                                       │   │
+│  │          └── Types[] ─────────────────────────┐                     │   │
+│  │                └── SteamManager               │                     │   │
+│  │                      └── Methods[] ───────────┼─────┐               │   │
+│  │                            └── PlayerHaveDLC  │     │               │   │
+│  │                                  └── Body ────┼─────┼──┐            │   │
+│  │                                      └── Instructions  │            │   │
+│  │                                          [0]: call     │            │   │
+│  │                                          [1]: callvirt ◄── WE EDIT  │   │
+│  │                                          [2]: brtrue       THESE    │   │
+│  │                                          ...                        │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  2. MODIFY: Replace instructions                                           │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  var il = method.Body.GetILProcessor();                             │   │
+│  │                                                                     │   │
+│  │  // Clear old instructions                                          │   │
+│  │  method.Body.Instructions.Clear();                                  │   │
+│  │                                                                     │   │
+│  │  // Add new ones                                                    │   │
+│  │  il.Append(il.Create(OpCodes.Ldc_I4_1));  // Push 1                │   │
+│  │  il.Append(il.Create(OpCodes.Ret));       // Return                │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  3. SAVE: Write modified DLL                                               │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  assembly.Write("Assembly-CSharp.dll");                             │   │
+│  │                                                                     │   │
+│  │  Mono.Cecil:                                                        │   │
+│  │  • Recalculates all byte offsets                                   │   │
+│  │  • Updates metadata tables                                         │   │
+│  │  • Fixes method body sizes                                         │   │
+│  │  • Writes valid PE executable                                      │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  Game now loads OUR code instead of the original!                         │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Visual Summary
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    THE COMPLETE PICTURE                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│                          DEVELOPER                                          │
+│                              │                                              │
+│                              ▼                                              │
+│                      ┌──────────────┐                                       │
+│                      │   C# Code    │                                       │
+│                      │  if(steam    │                                       │
+│                      │    .owns())  │                                       │
+│                      └──────────────┘                                       │
+│                              │                                              │
+│                         Compile                                             │
+│                              │                                              │
+│                              ▼                                              │
+│                      ┌──────────────┐                                       │
+│                      │  IL Bytecode │◄──── READABLE! Names preserved       │
+│                      │  .method     │                                       │
+│                      │  PlayerHave  │                                       │
+│                      │  DLC(...)    │                                       │
+│                      └──────────────┘                                       │
+│                              │                                              │
+│              ┌───────────────┴───────────────┐                              │
+│              │                               │                              │
+│              ▼                               ▼                              │
+│       NORMAL PATH                      ATTACKER PATH                        │
+│              │                               │                              │
+│              ▼                               ▼                              │
+│      ┌──────────────┐                ┌──────────────┐                       │
+│      │     JIT      │                │   ILSpy/     │◄── Decompile          │
+│      │   Compile    │                │   dnSpy      │                       │
+│      └──────────────┘                └──────────────┘                       │
+│              │                               │                              │
+│              ▼                               ▼                              │
+│      ┌──────────────┐                ┌──────────────┐                       │
+│      │   Execute    │                │  See source  │◄── Find target        │
+│      │   as-is      │                │  code!       │                       │
+│      └──────────────┘                └──────────────┘                       │
+│              │                               │                              │
+│              │                               ▼                              │
+│              │                       ┌──────────────┐                       │
+│              │                       │  Mono.Cecil  │◄── Modify IL          │
+│              │                       │  edit IL     │                       │
+│              │                       └──────────────┘                       │
+│              │                               │                              │
+│              │                               ▼                              │
+│              │                       ┌──────────────┐                       │
+│              │                       │  Patched     │◄── Save               │
+│              │                       │  DLL         │                       │
+│              │                       └──────────────┘                       │
+│              │                               │                              │
+│              └───────────────┬───────────────┘                              │
+│                              │                                              │
+│                              ▼                                              │
+│                       ┌──────────────┐                                      │
+│                       │    GAME      │                                      │
+│                       │   RUNS       │                                      │
+│                       │  (with our   │                                      │
+│                       │   code!)     │                                      │
+│                       └──────────────┘                                      │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
