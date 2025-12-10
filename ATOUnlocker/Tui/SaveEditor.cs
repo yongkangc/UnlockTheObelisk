@@ -6,14 +6,20 @@ namespace ATOUnlocker.Tui;
 public class SaveEditor
 {
     private readonly string _atoPath;
+    private readonly string _runsPath;
     private PlayerData _playerData;
+    private List<PlayerRun> _runs;
     private bool _hasChanges;
+    private bool _hasRunsChanges;
 
     public SaveEditor(string atoPath)
     {
         _atoPath = atoPath;
+        _runsPath = Path.Combine(Path.GetDirectoryName(atoPath)!, "runs.ato");
         _playerData = SaveManager.LoadPlayerData(atoPath);
+        _runs = SaveManager.LoadRuns(_runsPath);
         _hasChanges = false;
+        _hasRunsChanges = false;
     }
 
     public void Run()
@@ -24,10 +30,11 @@ public class SaveEditor
 
         while (true)
         {
+            var hasAnyChanges = _hasChanges || _hasRunsChanges;
             var choice = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
                     .Title("[yellow]Main Menu[/]")
-                    .PageSize(10)
+                    .PageSize(12)
                     .AddChoices(new[]
                     {
                         "Heroes",
@@ -36,9 +43,16 @@ public class SaveEditor
                         "Currencies & Resources",
                         "Progression",
                         "Madness Levels",
+                        $"Reward Chests ({_runs.Count})",
                         "Unlock All",
-                        _hasChanges ? "[green]Save & Exit[/]" : "Exit"
+                        hasAnyChanges ? "[green]Save & Exit[/]" : "Exit"
                     }));
+
+            if (choice.StartsWith("Reward Chests"))
+            {
+                RewardChestMenu();
+                continue;
+            }
 
             switch (choice)
             {
@@ -64,7 +78,7 @@ public class SaveEditor
                     UnlockAll();
                     break;
                 default:
-                    if (_hasChanges)
+                    if (hasAnyChanges)
                     {
                         if (AnsiConsole.Confirm("Save changes before exiting?"))
                         {
@@ -84,6 +98,7 @@ public class SaveEditor
             .Title("[yellow]Select heroes to unlock[/]")
             .PageSize(20)
             .InstructionsText("[grey](Press [blue]<space>[/] to toggle, [green]<enter>[/] to confirm)[/]")
+            .UseConverter(heroId => Reference.GetHeroDisplayName(heroId))
             .AddChoices(Reference.Heroes);
 
         // Pre-select currently unlocked heroes
@@ -279,6 +294,7 @@ public class SaveEditor
         var selectedHero = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
                 .Title("[yellow]Select hero to set progress[/]")
+                .UseConverter(h => h == "Set All to Max" || h == "Back" ? h : Reference.GetHeroDisplayName(h))
                 .AddChoices(heroes.Append("Set All to Max").Append("Back")));
 
         if (selectedHero == "Back") return;
@@ -296,13 +312,14 @@ public class SaveEditor
         else
         {
             var currentProgress = heroProgress.GetValueOrDefault(selectedHero, 0);
+            var displayName = Reference.GetHeroDisplayName(selectedHero);
             var value = AnsiConsole.Prompt(
-                new TextPrompt<int>($"[yellow]Enter progress for {selectedHero} (current: {currentProgress}):[/]")
+                new TextPrompt<int>($"[yellow]Enter progress for {displayName} (current: {currentProgress}):[/]")
                     .DefaultValue(1000));
             heroProgress[selectedHero] = value;
             _playerData.HeroProgress = heroProgress;
             _hasChanges = true;
-            AnsiConsole.MarkupLine($"[green]{selectedHero} progress set to {value}[/]");
+            AnsiConsole.MarkupLine($"[green]{displayName} progress set to {value}[/]");
         }
         Thread.Sleep(500);
     }
@@ -408,6 +425,143 @@ public class SaveEditor
         }
     }
 
+    private void RewardChestMenu()
+    {
+        while (true)
+        {
+            if (_runs.Count == 0)
+            {
+                var createChoice = AnsiConsole.Prompt(
+                    new SelectionPrompt<string>()
+                        .Title("[yellow]Reward Chests[/] [grey](No reward chests found)[/]")
+                        .AddChoices(new[] { "Create New Reward Chest", "Back" }));
+
+                if (createChoice == "Back") return;
+
+                CreateNewRewardChest();
+                continue;
+            }
+
+            // Build choice list with run details
+            var choices = new List<string>();
+            for (int i = 0; i < _runs.Count; i++)
+            {
+                var run = _runs[i];
+                var heroes = string.Join(", ", new[] { run.Char0, run.Char1, run.Char2, run.Char3 }
+                    .Where(h => !string.IsNullOrEmpty(h))
+                    .Select(h => Reference.GetHeroDisplayName(h).Split('(')[0].Trim()));
+                choices.Add($"[{i}] Gold: {run.GoldGained}, Shards: {run.DustGained} ({heroes})");
+            }
+            choices.Add("Create New Reward Chest");
+            choices.Add("Back");
+
+            var choice = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("[yellow]Reward Chests[/]")
+                    .PageSize(15)
+                    .AddChoices(choices));
+
+            if (choice == "Back") return;
+            if (choice == "Create New Reward Chest")
+            {
+                CreateNewRewardChest();
+                continue;
+            }
+
+            // Parse index from choice
+            var indexStr = choice.Split(']')[0].TrimStart('[');
+            if (int.TryParse(indexStr, out int index) && index >= 0 && index < _runs.Count)
+            {
+                EditRewardChest(index);
+            }
+        }
+    }
+
+    private void CreateNewRewardChest()
+    {
+        var gold = AnsiConsole.Prompt(
+            new TextPrompt<int>("[yellow]Enter gold amount:[/]")
+                .DefaultValue(10000)
+                .Validate(v => v >= 0 ? ValidationResult.Success() : ValidationResult.Error("Must be >= 0")));
+
+        var dust = AnsiConsole.Prompt(
+            new TextPrompt<int>("[yellow]Enter shards/dust amount:[/]")
+                .DefaultValue(1000)
+                .Validate(v => v >= 0 ? ValidationResult.Success() : ValidationResult.Error("Must be >= 0")));
+
+        var newRun = new PlayerRun
+        {
+            Id = Guid.NewGuid().ToString(),
+            GoldGained = gold,
+            DustGained = dust,
+            TotalGoldGained = gold,
+            TotalDustGained = dust,
+            Version = "1.0",
+            gameDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+            Char0 = "archer",  // Default hero
+        };
+
+        _runs.Add(newRun);
+        _hasRunsChanges = true;
+        AnsiConsole.MarkupLine($"[green]Created reward chest with {gold} gold and {dust} shards![/]");
+        Thread.Sleep(500);
+    }
+
+    private void EditRewardChest(int index)
+    {
+        var run = _runs[index];
+
+        while (true)
+        {
+            var choice = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title($"[yellow]Edit Reward Chest {index}[/]")
+                    .AddChoices(new[]
+                    {
+                        $"Set Gold (Current: {run.GoldGained})",
+                        $"Set Shards/Dust (Current: {run.DustGained})",
+                        "Delete This Chest",
+                        "Back"
+                    }));
+
+            if (choice == "Back") return;
+
+            if (choice.StartsWith("Set Gold"))
+            {
+                var value = AnsiConsole.Prompt(
+                    new TextPrompt<int>("[yellow]Enter gold amount:[/]")
+                        .DefaultValue(run.GoldGained)
+                        .Validate(v => v >= 0 ? ValidationResult.Success() : ValidationResult.Error("Must be >= 0")));
+                run.GoldGained = value;
+                run.TotalGoldGained = Math.Max(run.TotalGoldGained, value);
+                _hasRunsChanges = true;
+                AnsiConsole.MarkupLine($"[green]Gold set to {value}[/]");
+            }
+            else if (choice.StartsWith("Set Shards"))
+            {
+                var value = AnsiConsole.Prompt(
+                    new TextPrompt<int>("[yellow]Enter shards/dust amount:[/]")
+                        .DefaultValue(run.DustGained)
+                        .Validate(v => v >= 0 ? ValidationResult.Success() : ValidationResult.Error("Must be >= 0")));
+                run.DustGained = value;
+                run.TotalDustGained = Math.Max(run.TotalDustGained, value);
+                _hasRunsChanges = true;
+                AnsiConsole.MarkupLine($"[green]Shards/Dust set to {value}[/]");
+            }
+            else if (choice == "Delete This Chest")
+            {
+                if (AnsiConsole.Confirm("[red]Delete this reward chest?[/]"))
+                {
+                    _runs.RemoveAt(index);
+                    _hasRunsChanges = true;
+                    AnsiConsole.MarkupLine("[green]Reward chest deleted![/]");
+                    return;
+                }
+            }
+            Thread.Sleep(300);
+        }
+    }
+
     private void UnlockAll()
     {
         if (!AnsiConsole.Confirm("[yellow]This will max out everything. Continue?[/]"))
@@ -464,9 +618,17 @@ public class SaveEditor
     {
         try
         {
-            SaveManager.SavePlayerData(_atoPath, _playerData);
+            if (_hasChanges)
+            {
+                SaveManager.SavePlayerData(_atoPath, _playerData);
+                _hasChanges = false;
+            }
+            if (_hasRunsChanges)
+            {
+                SaveManager.SaveRuns(_runsPath, _runs);
+                _hasRunsChanges = false;
+            }
             AnsiConsole.MarkupLine("[green]Save successful![/]");
-            _hasChanges = false;
         }
         catch (Exception ex)
         {

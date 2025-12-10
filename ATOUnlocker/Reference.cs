@@ -22,6 +22,54 @@ public static class Reference
         "warlock"
     };
 
+    // Hero ID to display name mapping (subclass → character name)
+    public static readonly Dictionary<string, string> HeroNames = new()
+    {
+        // Base Game - Scouts
+        {"archer", "Andrin"},
+        {"assassin", "Thuls"},
+        {"mercenary", "Sylvie"},
+        {"minstrel", "Gustav"},
+
+        // Base Game - Warriors
+        {"berserker", "Magnus"},
+        {"ranger", "Heiner"},
+        {"prophet", "Grukli"},
+        {"warden", "Bree"},
+        {"sentinel", "Yogger"},
+
+        // Base Game - Mages
+        {"elementalist", "Evelyn"},
+        {"pyromancer", "Cornelius"},
+        {"loremaster", "Wilbur"},
+        {"warlock", "Zek"},
+
+        // Base Game - Healers
+        {"cleric", "Reginald"},
+        {"priest", "Ottis"},
+        {"voodoowitch", "Malukah"},
+        {"seer", "Nezglekt"},
+
+        // DLC Heroes
+        {"engineer", "Nenukil"},
+        {"queen", "Amelia"},
+        {"shaman", "Tulah"},
+        {"alchemist", "Bernard"},
+        {"valkyrie", "Sigrun"},
+        {"bloodmage", "Velarion"},
+        {"deathknight", "Nevermoor"},
+        // Ulminin DLC
+        {"diviner", "Navalea"},
+        {"fallen", "Laia"},
+    };
+
+    /// <summary>
+    /// Gets a display name for a hero ID, e.g., "Andrin (archer)"
+    /// Falls back to just the ID if not in the mapping
+    /// </summary>
+    public static string GetHeroDisplayName(string heroId) =>
+        HeroNames.TryGetValue(heroId, out var name) ? $"{name} ({heroId})" : heroId;
+
     // Cards list - this is a subset, cards are dynamically loaded from save
     public static IReadOnlyList<string> Cards = new List<string>
     {
