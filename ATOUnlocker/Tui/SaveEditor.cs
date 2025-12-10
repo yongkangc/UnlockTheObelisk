@@ -283,8 +283,8 @@ public class SaveEditor
                     .AddChoices(new[]
                     {
                         $"Set Supply (Current: {currentSupply})",
-                        $"Set Gold Gained [Stats] (Current: {currentGold})",
-                        $"Set Shards Gained [Stats] (Current: {currentDust})",
+                        $"Set Gold Gained [[Stats]] (Current: {currentGold})",
+                        $"Set Shards Gained [[Stats]] (Current: {currentDust})",
                         $"Set Perk Points (Current: {currentPerkPoints})",
                         "Set Hero Progress",
                         "Back"
